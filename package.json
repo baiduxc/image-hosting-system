@@ -1,0 +1,32 @@
+{
+  "name": "image-hosting-system",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.4.20",
+    "axios": "^1.6.0",
+    "echarts": "^5.6.0",
+    "lucide-vue-next": "^0.542.0",
+    "postcss": "8.5",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "tdesign-icons-vue-next": "^0.3.6",
+    "tdesign-vue-next": "^1.13.1",
+    "vue": "^3.5.12",
+    "vue-echarts": "^7.0.3",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.8"
+  }
+}
