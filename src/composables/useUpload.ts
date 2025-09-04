@@ -104,7 +104,7 @@ export function useUpload() {
       }
 
     } catch (error: any) {
-      console.error('上传错误:', error)
+
       // 更新所有uploading状态的文件为error
       uploadFiles.value.forEach(f => {
         if (f.status === 'uploading') {

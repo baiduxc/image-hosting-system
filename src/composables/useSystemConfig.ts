@@ -35,7 +35,7 @@ export const useSystemConfig = () => {
       }
       configLoaded.value = true
     } catch (error) {
-      console.error('加载公开系统配置失败:', error)
+
       configLoaded.value = true // 即使失败也标记为已加载，使用默认值
     }
   }
@@ -56,7 +56,7 @@ export const useSystemConfig = () => {
       }
       configLoaded.value = true
     } catch (error) {
-      console.error('加载系统配置失败:', error)
+
       configLoaded.value = true // 即使失败也标记为已加载，使用默认值
     }
   }

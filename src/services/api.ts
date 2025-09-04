@@ -24,7 +24,6 @@ api.interceptors.request.use(
     return config
   },
   (error) => {
-    console.error('❌ 请求拦截器错误:', error)
     return Promise.reject(error)
   }
 )
@@ -36,7 +35,6 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    console.error('❌ API错误:', error.response?.status, error.response?.data || error.message)
     
     // 如果是401错误，清除token并跳转到登录页
     if (error.response?.status === 401) {

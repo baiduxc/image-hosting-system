@@ -81,7 +81,7 @@
           <div class="image-preview">
             <img 
               v-if="image.url" 
-              :src="getProxiedImageUrl(image.url)" 
+              :src="image.url" 
               :alt="image.originalName"
               class="preview-image"
               @error="handleImageError"
@@ -454,7 +454,7 @@ const loadImages = async () => {
       totalSize.value = imageList.value.reduce((sum, img) => sum + (img.size || 0), 0)
     }
   } catch (error) {
-    console.error('加载图片列表失败:', error)
+
     MessagePlugin.error('加载图片列表失败')
   } finally {
     isLoading.value = false
@@ -474,7 +474,7 @@ const deleteImage = async (id: number) => {
       MessagePlugin.error('删除失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('删除图片失败:', error)
+
     MessagePlugin.error('删除失败: ' + error.message)
   }
 }
@@ -540,7 +540,7 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text)
     MessagePlugin.success('链接已复制到剪贴板')
   } catch (error) {
-    console.error('复制失败:', error)
+
     MessagePlugin.error('复制失败')
   }
 }
@@ -567,35 +567,19 @@ const formatDate = (dateString: string): string => {
   })
 }
 
-// 获取代理图片URL，解决CORS问题
-const getProxiedImageUrl = (originalUrl: string): string => {
-  if (!originalUrl) return ''
-  
-  // 如果是本地图片或已经是代理URL，直接返回
-  if (originalUrl.startsWith('/') || originalUrl.includes('/api/proxy-image')) {
-    return originalUrl
-  }
-  
-  // 对于外部CDN图片，使用代理接口
-  if (originalUrl.includes('http')) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001'
-    return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
-  }
-  
-  return originalUrl
-}
+// 移除不再使用的函数
 
 // 图片加载成功处理
 const handleImageLoad = (e: Event) => {
   // 图片加载成功
 }
 
-// 图片加载错误处理
+// 图片加载错误处理 - 直接显示错误占位符
 const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
-  console.warn('图片加载失败:', img.src)
+
   
-  // 设置默认占位图
+  // 隐藏图片并显示占位符
   img.style.display = 'none'
   const parent = img.parentElement
   if (parent && !parent.querySelector('.error-placeholder')) {
@@ -616,21 +600,6 @@ const handleImageError = (e: Event) => {
     `
     parent.appendChild(placeholder)
   }
-  const originalSrc = img.src
-  
-  // 如果是外部CDN图片，尝试使用代理接口
-  if (originalSrc.includes('cdnn.cc') || originalSrc.includes('http')) {
-    // 检查是否已经是代理URL，避免无限循环
-    if (!originalSrc.includes('/api/proxy-image')) {
-      const proxyUrl = `${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/api/proxy-image?url=${encodeURIComponent(originalSrc)}`
-
-      img.src = proxyUrl
-      return
-    }
-  }
-  
-  // 如果代理也失败了，隐藏图片
-  img.style.display = 'none'
 }
 
 // 监听搜索查询变化

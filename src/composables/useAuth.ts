@@ -18,7 +18,7 @@ const initializeAuth = () => {
       user.value = JSON.parse(userData)
       isAuthenticated.value = true
     } catch (error) {
-      console.error('解析用户数据失败:', error)
+
       clearAuth()
     }
   }
@@ -77,17 +77,12 @@ export const useAuth = () => {
         MessagePlugin.success('登录成功')
         return { success: true }
       } else {
-        console.error('❌ 登录失败:', response.message)
+
         MessagePlugin.error(response.message || '登录失败')
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('❌ 登录异常:', error)
-      console.error('错误详情:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      })
+
       
       const message = error.response?.data?.message || error.message || '登录失败'
       MessagePlugin.error(message)
@@ -116,7 +111,7 @@ export const useAuth = () => {
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('注册失败:', error)
+
       const message = error.response?.data?.message || error.message || '注册失败'
       MessagePlugin.error(message)
       return { success: false, message }
@@ -130,7 +125,7 @@ export const useAuth = () => {
     try {
       await apiService.logout()
     } catch (error) {
-      console.error('登出请求失败:', error)
+
     } finally {
       clearAuth()
       MessagePlugin.success('已退出登录')
@@ -150,7 +145,7 @@ export const useAuth = () => {
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('获取用户资料失败:', error)
+
       return { success: false, message: error.message }
     }
   }
@@ -171,7 +166,7 @@ export const useAuth = () => {
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('更新用户资料失败:', error)
+
       const message = error.response?.data?.message || error.message || '更新失败'
       MessagePlugin.error(message)
       return { success: false, message }
@@ -197,7 +192,7 @@ export const useAuth = () => {
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('修改密码失败:', error)
+
       const message = error.response?.data?.message || error.message || '密码修改失败'
       MessagePlugin.error(message)
       return { success: false, message }

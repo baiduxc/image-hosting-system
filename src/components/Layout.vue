@@ -168,7 +168,7 @@ const checkServerStatus = async () => {
     await apiService.healthCheck()
     serverStatus.value = true
   } catch (error) {
-    console.warn('服务器状态检查失败:', (error as Error).message)
+
     serverStatus.value = false
   }
 }

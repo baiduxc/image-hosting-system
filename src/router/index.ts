@@ -115,7 +115,7 @@ router.beforeEach((to, from, next) => {
   try {
     user = userData ? JSON.parse(userData) : null
   } catch (error) {
-    console.error('解析用户数据失败:', error)
+
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
@@ -158,7 +158,6 @@ router.beforeEach((to, from, next) => {
 
 // 路由错误处理
 router.onError((error) => {
-  console.error('路由错误:', error)
   MessagePlugin.error('页面加载失败')
 })
 

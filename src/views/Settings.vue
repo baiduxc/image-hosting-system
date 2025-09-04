@@ -858,7 +858,7 @@ const testStorageConnection = async () => {
       MessagePlugin.error('连接测试失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('测试连接失败:', error)
+
     MessagePlugin.error('连接测试失败: ' + error.message)
   } finally {
     isTesting.value = false
@@ -883,7 +883,7 @@ const saveStorageConfig = async () => {
     storageDialogVisible.value = false
     loadStorageList()
   } catch (error: any) {
-    console.error('保存存储配置失败:', error)
+
     MessagePlugin.error('保存失败: ' + error.message)
   } finally {
     isSaving.value = false
@@ -902,7 +902,7 @@ const setDefaultStorage = async (storageId: string) => {
       MessagePlugin.error('设置失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('设置默认存储失败:', error)
+
     MessagePlugin.error('设置失败: ' + error.message)
   } finally {
     settingDefault.value = null
@@ -915,7 +915,7 @@ const deleteStorage = async (storageId: string) => {
     MessagePlugin.success('存储配置删除成功')
     loadStorageList()
   } catch (error: any) {
-    console.error('删除存储配置失败:', error)
+
     MessagePlugin.error('删除失败: ' + error.message)
   }
 }
@@ -930,7 +930,7 @@ const saveSystemConfig = async () => {
       MessagePlugin.error('保存失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('保存系统配置失败:', error)
+
     MessagePlugin.error('保存失败: ' + error.message)
   } finally {
     isSaving.value = false
@@ -947,7 +947,6 @@ const testEmail = async () => {
       MessagePlugin.error('发送失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('测试邮件失败:', error)
     MessagePlugin.error('发送失败: ' + error.message)
   } finally {
     isTesting.value = false
@@ -964,7 +963,7 @@ const saveEmailConfig = async () => {
       MessagePlugin.error('保存失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('保存邮件配置失败:', error)
+
     MessagePlugin.error('保存失败: ' + error.message)
   } finally {
     isSaving.value = false
@@ -981,7 +980,6 @@ const saveSecurityConfig = async () => {
       MessagePlugin.error('保存失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('保存安全配置失败:', error)
     MessagePlugin.error('保存失败: ' + error.message)
   } finally {
     isSaving.value = false
@@ -1032,7 +1030,6 @@ const loadConfigs = async () => {
       }
     }
   } catch (error) {
-    console.error('加载配置失败:', error)
     MessagePlugin.error('加载配置失败')
   }
 }

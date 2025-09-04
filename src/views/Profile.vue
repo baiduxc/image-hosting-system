@@ -216,7 +216,7 @@ const loadUserInfo = async () => {
       profileData.email = response.data.email
     }
   } catch (error) {
-    console.error('加载用户信息失败:', error)
+
     MessagePlugin.error('加载用户信息失败')
   }
 }
@@ -241,7 +241,7 @@ const handlePasswordSubmit = async () => {
       MessagePlugin.error(response.message || '密码修改失败')
     }
   } catch (error: any) {
-    console.error('密码修改失败:', error)
+
     MessagePlugin.error(error.message || '密码修改失败')
   } finally {
     isSubmitting.value = false
@@ -261,7 +261,7 @@ const handleProfileSubmit = async () => {
       MessagePlugin.error(response.message || '更新失败')
     }
   } catch (error: any) {
-    console.error('个人资料更新失败:', error)
+
     MessagePlugin.error(error.message || '更新失败')
   } finally {
     isSubmitting.value = false

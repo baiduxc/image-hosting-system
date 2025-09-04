@@ -411,7 +411,7 @@ const resendVerification = async () => {
     // 这里暂时显示提示，实际需要后端支持
     MessagePlugin.info('邮箱验证功能正在开发中')
   } catch (error: any) {
-    console.error('重新发送验证邮件失败:', error)
+
     MessagePlugin.error('发送失败')
   } finally {
     isResending.value = false
@@ -441,7 +441,7 @@ const checkRegistrationStatus = async () => {
       registrationAllowed.value = response.data.allowRegistration
     }
   } catch (error) {
-    console.error('检查注册状态失败:', error)
+
     // 如果检查失败，默认允许注册
     registrationAllowed.value = true
   }

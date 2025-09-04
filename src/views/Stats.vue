@@ -182,7 +182,6 @@ const loadStats = async () => {
       // updateCharts(response.data)
     }
   } catch (error) {
-    console.error('加载统计数据失败:', error)
     MessagePlugin.error('加载统计数据失败')
   }
 }
@@ -196,7 +195,6 @@ const loadDetailedStats = async () => {
     detailedStats.value = []
     statsPagination.value.total = 0
   } catch (error) {
-    console.error('加载详细统计失败:', error)
     MessagePlugin.error('加载详细统计失败')
   } finally {
     isLoadingStats.value = false
@@ -419,7 +417,6 @@ const exportStats = async () => {
     // TODO: 实现导出功能
     MessagePlugin.success('导出功能开发中...')
   } catch (error) {
-    console.error('导出失败:', error)
     MessagePlugin.error('导出失败')
   } finally {
     isExporting.value = false

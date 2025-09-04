@@ -228,7 +228,7 @@ const handleLogin = async () => {
       router.push('/')
     }
   } catch (error) {
-    console.error('登录处理错误:', error)
+
   }
 }
 
@@ -256,7 +256,7 @@ const handleForgotPassword = async () => {
     MessagePlugin.info('忘记密码功能正在开发中，请联系管理员')
     forgotPasswordVisible.value = false
   } catch (error: any) {
-    console.error('发送重置链接失败:', error)
+
     MessagePlugin.error('发送失败')
   } finally {
     isSendingReset.value = false

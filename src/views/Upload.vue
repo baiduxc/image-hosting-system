@@ -357,7 +357,7 @@ const loadStorageOptions = async () => {
       }
     }
   } catch (error) {
-    console.error('加载存储配置失败:', error)
+
   }
 }
 
@@ -451,7 +451,7 @@ const validateUrls = async () => {
       MessagePlugin.error('验证失败: ' + response.message)
     }
   } catch (error: any) {
-    console.error('验证错误:', error)
+
     MessagePlugin.error('验证失败: ' + error.message)
   } finally {
     validating.value = false
@@ -500,7 +500,7 @@ const handleTransfer = async () => {
       }))
     }
   } catch (error: any) {
-    console.error('转存错误:', error)
+
     MessagePlugin.error('转存失败: ' + error.message)
     transferProgress.value = urls.map(url => ({
       url,
@@ -518,7 +518,6 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text)
     MessagePlugin.success('链接已复制到剪贴板')
   } catch (error) {
-    console.error('复制失败:', error)
     MessagePlugin.error('复制失败')
   }
 }
