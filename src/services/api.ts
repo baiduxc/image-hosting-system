@@ -1,8 +1,11 @@
 import axios from 'axios'
 
 // 创建axios实例
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
@@ -12,6 +15,7 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
+
     // 添加JWT token到请求头
     const token = localStorage.getItem('token')
     if (token) {
@@ -20,6 +24,7 @@ api.interceptors.request.use(
     return config
   },
   (error) => {
+    console.error('❌ 请求拦截器错误:', error)
     return Promise.reject(error)
   }
 )
@@ -27,9 +32,11 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
+
     return response
   },
   (error) => {
+    console.error('❌ API错误:', error.response?.status, error.response?.data || error.message)
     
     // 如果是401错误，清除token并跳转到登录页
     if (error.response?.status === 401) {
@@ -443,7 +450,14 @@ export const apiService = {
     return response.data
   },
 
-  // 注意：已移除设置默认存储功能，改为前端缓存用户选择
+  // 设置默认存储
+  async setDefaultStorage(id: number): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.put(`/storage/${id}/default`)
+    return response.data
+  },
 
   // 获取用户个人资料
   async getUserProfile(): Promise<{
@@ -522,6 +536,16 @@ export const apiService = {
     message: string
   }> {
     const response = await api.post('/upload-to-storage', { files, storageId })
+    return response.data
+  },
+
+  // 获取公开的系统配置（无需认证）
+  async getSystemConfig(): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.get('/config/system')
     return response.data
   }
 }

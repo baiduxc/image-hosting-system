@@ -6,7 +6,21 @@
 </template>
 
 <script setup lang="ts">
-// 简化的App.vue，所有页面逻辑已移至独立组件
+import { onMounted } from 'vue'
+import { useSystemConfig } from '@/composables/useSystemConfig'
+
+// 使用系统配置
+const { loadPublicSystemConfig } = useSystemConfig()
+
+// 应用启动时加载公开的系统配置
+onMounted(async () => {
+  try {
+    await loadPublicSystemConfig()
+    console.log('✅ 系统配置加载完成')
+  } catch (error) {
+    console.error('❌ 系统配置加载失败:', error)
+  }
+})
 </script>
 
 <style scoped>

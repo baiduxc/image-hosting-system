@@ -81,11 +81,9 @@
           <div class="image-preview">
             <img 
               v-if="image.url" 
-              :src="image.url" 
+              :src="getProxiedImageUrl(image.url)" 
               :alt="image.originalName"
               class="preview-image"
-              crossorigin="anonymous"
-              referrerpolicy="no-referrer"
               @error="handleImageError"
               @click.stop="showPreview(image)"
               @load="handleImageLoad"
@@ -451,6 +449,7 @@ const loadImages = async () => {
         ...response.data.pagination
       }
       
+
       // 计算总大小
       totalSize.value = imageList.value.reduce((sum, img) => sum + (img.size || 0), 0)
     }
@@ -568,6 +567,24 @@ const formatDate = (dateString: string): string => {
   })
 }
 
+// 获取代理图片URL，解决CORS问题
+const getProxiedImageUrl = (originalUrl: string): string => {
+  if (!originalUrl) return ''
+  
+  // 如果是本地图片或已经是代理URL，直接返回
+  if (originalUrl.startsWith('/') || originalUrl.includes('/api/proxy-image')) {
+    return originalUrl
+  }
+  
+  // 对于外部CDN图片，使用代理接口
+  if (originalUrl.includes('http')) {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001'
+    return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
+  }
+  
+  return originalUrl
+}
+
 // 图片加载成功处理
 const handleImageLoad = (e: Event) => {
   // 图片加载成功
@@ -576,8 +593,43 @@ const handleImageLoad = (e: Event) => {
 // 图片加载错误处理
 const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
+  console.warn('图片加载失败:', img.src)
   
-  // 直接隐藏加载失败的图片
+  // 设置默认占位图
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent && !parent.querySelector('.error-placeholder')) {
+    const placeholder = document.createElement('div')
+    placeholder.className = 'error-placeholder'
+    placeholder.innerHTML = '<div class="placeholder-icon">🖼️</div><div class="placeholder-text">图片加载失败</div>'
+    placeholder.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background-color: var(--td-bg-color-component);
+      color: var(--td-text-color-placeholder);
+      font-size: 12px;
+      border-radius: 4px;
+    `
+    parent.appendChild(placeholder)
+  }
+  const originalSrc = img.src
+  
+  // 如果是外部CDN图片，尝试使用代理接口
+  if (originalSrc.includes('cdnn.cc') || originalSrc.includes('http')) {
+    // 检查是否已经是代理URL，避免无限循环
+    if (!originalSrc.includes('/api/proxy-image')) {
+      const proxyUrl = `${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/api/proxy-image?url=${encodeURIComponent(originalSrc)}`
+
+      img.src = proxyUrl
+      return
+    }
+  }
+  
+  // 如果代理也失败了，隐藏图片
   img.style.display = 'none'
 }
 

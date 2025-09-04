@@ -49,11 +49,15 @@ export const useAuth = () => {
     rememberMe?: boolean
   }) => {
     isLoading.value = true
+
+    
     try {
       const response = await apiService.login(credentials)
+
       
       if (response.success && response.data) {
         const { user: userData, token } = response.data
+
         
         // 更新状态
         user.value = {
@@ -73,11 +77,18 @@ export const useAuth = () => {
         MessagePlugin.success('登录成功')
         return { success: true }
       } else {
+        console.error('❌ 登录失败:', response.message)
         MessagePlugin.error(response.message || '登录失败')
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-      console.error('登录失败:', error)
+      console.error('❌ 登录异常:', error)
+      console.error('错误详情:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      })
+      
       const message = error.response?.data?.message || error.message || '登录失败'
       MessagePlugin.error(message)
       return { success: false, message }

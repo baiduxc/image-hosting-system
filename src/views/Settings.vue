@@ -35,7 +35,16 @@
                   <t-tag v-if="storage.isDefault" theme="success" size="small">默认</t-tag>
                 </div>
                 <div class="storage-actions">
-                  <!-- 已移除设置默认存储功能，改为上传时用户选择并缓存 -->
+                  <t-button 
+                    v-if="!storage.isDefault"
+                    theme="primary" 
+                    variant="outline" 
+                    size="small"
+                    @click="setDefaultStorage(storage.id)"
+                    :loading="settingDefault === storage.id"
+                  >
+                    设为默认
+                  </t-button>
                   <t-button 
                     theme="default" 
                     variant="text" 
@@ -682,6 +691,7 @@ const isSaving = ref(false)
 const isTesting = ref(false)
 const storageDialogVisible = ref(false)
 const isEditingStorage = ref(false)
+const settingDefault = ref<string | null>(null)
 
 // 存储列表
 const storageList = ref<any[]>([])
@@ -880,7 +890,24 @@ const saveStorageConfig = async () => {
   }
 }
 
-// 已移除设置默认存储功能，改为上传时用户选择并缓存到localStorage
+// 设置默认存储
+const setDefaultStorage = async (storageId: string) => {
+  settingDefault.value = storageId
+  try {
+    const response = await apiService.setDefaultStorage(parseInt(storageId))
+    if (response.success) {
+      MessagePlugin.success('默认存储设置成功')
+      loadStorageList()
+    } else {
+      MessagePlugin.error('设置失败: ' + response.message)
+    }
+  } catch (error: any) {
+    console.error('设置默认存储失败:', error)
+    MessagePlugin.error('设置失败: ' + error.message)
+  } finally {
+    settingDefault.value = null
+  }
+}
 
 const deleteStorage = async (storageId: string) => {
   try {
@@ -965,18 +992,24 @@ const loadStorageList = async () => {
   try {
     const response = await apiService.getAllStorages()
     if (response.success && response.data) {
-      storageList.value = response.data.map(storage => ({
-        id: storage.id.toString(),
-        name: storage.name,
-        type: storage.type,
-        isDefault: storage.is_default,
-        status: 'connected', // TODO: 实现真实的连接状态检测
-        customDomain: storage.config.customDomain || '',
-        ...storage.config
-      }))
+
+      storageList.value = response.data.map(storage => {
+        const mapped = {
+          id: storage.id.toString(),
+          name: storage.name,
+          type: storage.type,
+          isDefault: storage.is_default,
+          status: 'connected', // TODO: 实现真实的连接状态检测
+          customDomain: storage.config.customDomain || '',
+          ...storage.config
+        }
+
+        return mapped
+      })
+
     }
   } catch (error) {
-    console.error('加载存储配置失败:', error)
+
     MessagePlugin.error('加载存储配置失败')
   }
 }

@@ -24,15 +24,16 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false 
     }
   },
-  {
-    path: '/register',
-    name: 'Register',
-    component: Register,
-    meta: { 
-      title: '注册',
-      requiresAuth: false 
-    }
-  },
+  // 注册路由已隐藏
+  // {
+  //   path: '/register',
+  //   name: 'Register',
+  //   component: Register,
+  //   meta: { 
+  //     title: '注册',
+  //     requiresAuth: false 
+  //   }
+  // },
   {
     path: '/',
     component: Layout,

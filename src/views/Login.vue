@@ -35,7 +35,7 @@
         <div class="form-container">
           <div class="form-header">
             <h2 class="form-title">欢迎回来</h2>
-            <p class="form-subtitle">请登录您的账户</p>
+            <p class="form-subtitle">技术验证用，请勿访问</p>
           </div>
 
           <t-form
@@ -93,14 +93,7 @@
             </t-button>
           </t-form>
 
-          <div class="form-footer">
-            <p class="register-prompt">
-              还没有账户？
-              <t-link theme="primary" @click="goToRegister">
-                立即注册
-              </t-link>
-            </p>
-          </div>
+          <!-- 注册功能已隐藏 -->
 
           <!-- 社交登录（可选） -->
           <div class="social-login" v-if="false">
