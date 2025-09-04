@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useSystemConfig } from '@/composables/useSystemConfig'
+import { apiService } from '@/services/api'
 
 // 导入页面组件
 import Upload from '@/views/Upload.vue'
@@ -24,16 +25,15 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false 
     }
   },
-  // 注册路由已隐藏
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   component: Register,
-  //   meta: { 
-  //     title: '注册',
-  //     requiresAuth: false 
-  //   }
-  // },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register,
+    meta: { 
+      title: '注册',
+      requiresAuth: false 
+    }
+  },
   {
     path: '/',
     component: Layout,
@@ -106,7 +106,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // 获取认证状态
   const token = localStorage.getItem('token')
   const userData = localStorage.getItem('user')
@@ -131,6 +131,24 @@ router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title} - ${defaultSiteName}`
   } else {
     document.title = defaultSiteName
+  }
+  
+  // 检查注册页面访问权限
+  if (to.name === 'Register') {
+    try {
+      const configResponse = await apiService.getSystemConfig()
+      if (configResponse.success && configResponse.data) {
+        const allowRegister = configResponse.data.allow_register !== false
+        if (!allowRegister) {
+          MessagePlugin.warning('注册功能已关闭')
+          next('/login')
+          return
+        }
+      }
+    } catch (error) {
+      console.error('获取系统配置失败:', error)
+      // 如果获取配置失败，默认允许访问注册页面
+    }
   }
   
   // 检查是否需要登录

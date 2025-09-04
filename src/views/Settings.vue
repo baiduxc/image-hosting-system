@@ -336,12 +336,13 @@
             class="settings-form"
           >
             <div class="form-row">
-              <t-form-item label="启用用户注册" name="allowRegister" class="form-item">
-                <t-switch v-model="securityConfig.allowRegister" />
-              </t-form-item>
               <t-form-item label="需要邮箱验证" name="requireEmailVerification" class="form-item">
                 <t-switch v-model="securityConfig.requireEmailVerification" />
+                <template #help>
+                  开启后，新用户注册需要验证邮箱才能使用
+                </template>
               </t-form-item>
+              <div class="form-item"></div>
             </div>
 
             <div class="form-row">
@@ -751,7 +752,6 @@ const emailConfig = reactive({
 
 // 安全配置
 const securityConfig = reactive({
-  allowRegister: true,
   requireEmailVerification: false,
   jwtExpiration: 24,
   maxLoginAttempts: 5

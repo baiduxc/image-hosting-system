@@ -6,7 +6,8 @@ const systemConfig = ref({
   siteName: '图床管理系统',
   siteIcon: '',
   siteLogo: '',
-  siteDescription: '专业的图片存储和管理平台'
+  siteDescription: '专业的图片存储和管理平台',
+  allowRegister: false // 默认不允许注册
 })
 
 // 是否已加载配置
@@ -25,7 +26,8 @@ export const useSystemConfig = () => {
           siteName: response.data.site_title || '图床管理系统',
           siteIcon: response.data.site_logo || '',
           siteLogo: response.data.site_logo || '',
-          siteDescription: response.data.site_description || '专业的图片存储和管理平台'
+          siteDescription: response.data.site_description || '专业的图片存储和管理平台',
+          allowRegister: response.data.allow_register !== false // 默认允许注册
         }
         Object.assign(systemConfig.value, config)
         
@@ -85,6 +87,7 @@ export const useSystemConfig = () => {
   const siteIcon = computed(() => systemConfig.value.siteIcon)
   const siteLogo = computed(() => systemConfig.value.siteLogo)
   const siteDescription = computed(() => systemConfig.value.siteDescription)
+  const allowRegister = computed(() => systemConfig.value.allowRegister)
 
   return {
     systemConfig,
@@ -95,6 +98,7 @@ export const useSystemConfig = () => {
     siteName,
     siteIcon,
     siteLogo,
-    siteDescription
+    siteDescription,
+    allowRegister
   }
 }

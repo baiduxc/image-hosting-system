@@ -7,22 +7,6 @@
         <p class="page-description">管理已上传的图片文件</p>
       </div>
       <div class="header-right">
-        <t-input
-          v-model="searchQuery"
-          placeholder="搜索图片..."
-          class="search-input"
-          @input="handleSearch"
-        >
-          <template #prefix-icon>
-            <SearchIcon class="search-icon" />
-          </template>
-        </t-input>
-        <t-dropdown :options="filterOptions" @click="handleFilterClick">
-          <t-button variant="outline">
-            <template #icon><FilterIcon /></template>
-            筛选
-          </t-button>
-        </t-dropdown>
         <t-dropdown :options="viewOptions" @click="handleViewChange">
           <t-button variant="outline">
             <template #icon><component :is="currentViewIcon" /></template>
@@ -66,26 +50,15 @@
           v-for="image in imageList" 
           :key="image.id"
           class="image-card"
-          :class="{ 'selected': selectedImages.includes(image.id) }"
-          @click="toggleSelection(image.id)"
         >
-          <!-- 选择框 -->
-          <div class="selection-overlay">
-            <t-checkbox 
-              :checked="selectedImages.includes(image.id)"
-              @click.stop="toggleSelection(image.id)"
-            />
-          </div>
-
           <!-- 图片预览 -->
-          <div class="image-preview">
+          <div class="image-preview" @click="showPreview(image)">
             <img 
               v-if="image.url" 
-              :src="image.url" 
+              :src="getImageUrl(image.url)" 
               :alt="image.originalName"
               class="preview-image"
               @error="handleImageError"
-              @click.stop="showPreview(image)"
               @load="handleImageLoad"
             />
             <div v-else class="preview-placeholder">
@@ -109,17 +82,21 @@
 
           <!-- 操作按钮 -->
           <div class="image-actions">
-            <t-button size="small" variant="outline" @click.stop="copyToClipboard(image.url)" :disabled="!image.url">
+            <t-button size="small" theme="primary" variant="outline" @click="copyToClipboard(image.url)" :disabled="!image.url">
               <template #icon><CopyIcon /></template>
+              复制链接
             </t-button>
-            <t-button size="small" variant="outline" @click.stop="showPreview(image)">
+            <t-button size="small" theme="default" variant="outline" @click="showPreview(image)">
               <template #icon><EyeIcon /></template>
+              预览
             </t-button>
-            <t-button size="small" variant="outline" @click.stop="downloadImage(image)">
+            <t-button size="small" theme="default" variant="outline" @click="downloadImage(image)">
               <template #icon><DownloadIcon /></template>
+              下载
             </t-button>
-            <t-button size="small" theme="danger" @click.stop="deleteImage(image.id)" :disabled="!image.id">
+            <t-button size="small" theme="danger" variant="outline" @click="confirmDelete(image.id)" :disabled="!image.id">
               <template #icon><TrashIcon /></template>
+              删除
             </t-button>
           </div>
         </div>
@@ -141,11 +118,9 @@
             <div class="table-preview">
               <img 
                 v-if="row.url" 
-                :src="row.url" 
+                :src="getImageUrl(row.url)" 
                 :alt="row.originalName"
                 class="table-image"
-                crossorigin="anonymous"
-                referrerpolicy="no-referrer"
                 @error="handleImageError"
                 @click="showPreview(row)"
                 @load="handleImageLoad"
@@ -196,7 +171,7 @@
                 <template #icon><DownloadIcon /></template>
                 下载
               </t-button>
-              <t-button size="small" variant="text" theme="danger" @click="deleteImage(row.id)" :disabled="!row.id">
+              <t-button size="small" variant="text" theme="danger" @click="confirmDelete(row.id)" :disabled="!row.id">
                 <template #icon><TrashIcon /></template>
                 删除
               </t-button>
@@ -228,11 +203,9 @@
       <div class="preview-dialog" v-if="previewImage">
         <div class="preview-content">
           <img 
-            :src="previewImage.url" 
+            :src="getImageUrl(previewImage.url)" 
             :alt="previewImage.originalName"
             class="preview-full-image"
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"
             @error="handleImageError"
             @load="handleImageLoad"
           />
@@ -271,6 +244,39 @@
         </div>
       </div>
     </t-dialog>
+
+    <!-- 删除确认对话框 -->
+    <t-dialog
+      v-model:visible="deleteDialogVisible"
+      header="确认删除"
+      :confirm-btn="{ content: '确认删除', theme: 'danger' }"
+      :cancel-btn="{ content: '取消' }"
+      @confirm="handleConfirmDelete"
+      @cancel="handleCancelDelete"
+    >
+      <div class="delete-dialog-content">
+        <div class="delete-warning">
+          <TrashIcon class="warning-icon" />
+          <div class="warning-text">
+            <h4>确定要删除这张图片吗？</h4>
+            <p>删除后将无法恢复，请谨慎操作。</p>
+          </div>
+        </div>
+        <div v-if="imageToDelete" class="delete-image-info">
+          <img 
+            v-if="imageToDelete.url" 
+            :src="getImageUrl(imageToDelete.url)" 
+            :alt="imageToDelete.originalName"
+            class="delete-preview-image"
+            @error="handleImageError"
+          />
+          <div class="delete-info">
+            <p class="delete-filename">{{ imageToDelete.originalName || '未知文件名' }}</p>
+            <p class="delete-meta">{{ formatFileSize(imageToDelete.size || 0) }} • {{ formatDate(imageToDelete.createdAt) }}</p>
+          </div>
+        </div>
+      </div>
+    </t-dialog>
   </div>
 </template>
 
@@ -304,6 +310,8 @@ const imageList = ref<any[]>([])
 const previewVisible = ref(false)
 const previewImage = ref<any>(null)
 const totalSize = ref(0)
+const deleteDialogVisible = ref(false)
+const imageToDelete = ref<any>(null)
 
 // 分页数据
 const pagination = ref({
@@ -461,7 +469,44 @@ const loadImages = async () => {
   }
 }
 
-// 删除图片
+// 确认删除图片
+const confirmDelete = (id: number) => {
+  const image = imageList.value.find(img => img.id === id)
+  if (image) {
+    imageToDelete.value = image
+    deleteDialogVisible.value = true
+  }
+}
+
+// 处理确认删除
+const handleConfirmDelete = async () => {
+  if (!imageToDelete.value) return
+  
+  try {
+    const response = await apiService.deleteImage(imageToDelete.value.id)
+    if (response.success) {
+      imageList.value = imageList.value.filter(img => img.id !== imageToDelete.value.id)
+      selectedImages.value = selectedImages.value.filter(imgId => imgId !== imageToDelete.value.id)
+      pagination.value.total -= 1
+      MessagePlugin.success('图片删除成功')
+    } else {
+      MessagePlugin.error('删除失败: ' + response.message)
+    }
+  } catch (error: any) {
+    MessagePlugin.error('删除失败: ' + error.message)
+  } finally {
+    deleteDialogVisible.value = false
+    imageToDelete.value = null
+  }
+}
+
+// 处理取消删除
+const handleCancelDelete = () => {
+  deleteDialogVisible.value = false
+  imageToDelete.value = null
+}
+
+// 删除图片（保留原函数供批量删除使用）
 const deleteImage = async (id: number) => {
   try {
     const response = await apiService.deleteImage(id)
@@ -474,7 +519,6 @@ const deleteImage = async (id: number) => {
       MessagePlugin.error('删除失败: ' + response.message)
     }
   } catch (error: any) {
-
     MessagePlugin.error('删除失败: ' + error.message)
   }
 }
@@ -567,7 +611,21 @@ const formatDate = (dateString: string): string => {
   })
 }
 
-// 移除不再使用的函数
+// 获取图片URL - 统一处理图片显示
+const getImageUrl = (url: string): string => {
+  if (!url) return ''
+  
+  // 如果是完整的URL（包含协议），直接返回
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  
+  // 如果是相对路径，需要添加API基础URL
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+  const baseUrl = apiBaseUrl.replace('/api', '')
+  
+  return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`
+}
 
 // 图片加载成功处理
 const handleImageLoad = (e: Event) => {
@@ -720,29 +778,15 @@ onMounted(() => {
   background-color: var(--td-bg-color-container);
   border-radius: 12px;
   overflow: hidden;
-  border: 2px solid transparent;
+  border: 1px solid var(--td-border-level-1-color);
   transition: all 0.3s ease;
-  cursor: pointer;
+  box-shadow: var(--td-shadow-1);
 }
 
 .image-card:hover {
   border-color: var(--td-brand-color-light);
   box-shadow: var(--td-shadow-2);
-}
-
-.image-card.selected {
-  border-color: var(--td-brand-color);
-  box-shadow: 0 0 0 2px var(--td-brand-color-light);
-}
-
-.selection-overlay {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 2;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  padding: 4px;
+  transform: translateY(-2px);
 }
 
 .image-preview {
@@ -753,13 +797,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
 }
 
 .preview-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.image-preview:hover .preview-image {
+  transform: scale(1.05);
 }
 
 .preview-placeholder {
@@ -805,11 +855,17 @@ onMounted(() => {
 }
 
 .image-actions {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-top: 1px solid var(--td-border-level-1-color);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+  padding: 16px;
+  border-top: 1px solid var(--td-border-level-1-color);
+  background-color: var(--td-bg-color-secondarycontainer);
+}
+
+.image-actions .t-button {
+  font-size: 12px;
+  height: 32px;
 }
 
 /* 列表视图样式 */
@@ -958,6 +1014,83 @@ onMounted(() => {
   flex: 1;
 }
 
+/* 删除确认对话框样式 */
+.delete-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.delete-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--td-error-color-1);
+  border-radius: 8px;
+  border-left: 4px solid var(--td-error-color);
+}
+
+.warning-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--td-error-color);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+}
+
+.warning-text p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--td-text-color-secondary);
+}
+
+.delete-image-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--td-bg-color-container);
+  border-radius: 8px;
+  border: 1px solid var(--td-border-level-1-color);
+}
+
+.delete-preview-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.delete-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-filename {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .grid-view {
@@ -997,7 +1130,7 @@ onMounted(() => {
   }
   
   .image-actions {
-    flex-wrap: wrap;
+    grid-template-columns: 1fr;
     gap: 6px;
   }
   

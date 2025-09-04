@@ -93,7 +93,15 @@
             </t-button>
           </t-form>
 
-          <!-- 注册功能已隐藏 -->
+          <!-- 注册链接 - 根据系统配置显示 -->
+          <div v-if="allowRegister" class="form-footer">
+            <div class="register-prompt">
+              <span>还没有账户？</span>
+              <t-link theme="primary" @click="goToRegister">
+                立即注册
+              </t-link>
+            </div>
+          </div>
 
           <!-- 社交登录（可选） -->
           <div class="social-login" v-if="false">
@@ -171,7 +179,7 @@ import { useSystemConfig } from '@/composables/useSystemConfig'
 
 const router = useRouter()
 const { login, isLoading } = useAuth()
-const { siteName, siteDescription } = useSystemConfig()
+const { siteName, siteDescription, allowRegister, loadPublicSystemConfig } = useSystemConfig()
 
 // 表单引用
 const loginForm = ref()
@@ -267,6 +275,12 @@ const handleForgotPassword = async () => {
 const goToRegister = () => {
   router.push('/register')
 }
+
+// 组件挂载时加载公开系统配置
+import { onMounted } from 'vue'
+onMounted(() => {
+  loadPublicSystemConfig()
+})
 </script>
 
 <style scoped>
