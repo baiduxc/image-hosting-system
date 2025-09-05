@@ -1,241 +1,155 @@
 <template>
   <div class="manage-page">
     <!-- 页面标题和操作栏 -->
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">图片管理</h1>
-        <p class="page-description">管理已上传的图片文件</p>
-      </div>
-      <div class="header-right">
-        <t-dropdown :options="viewOptions" @click="handleViewChange">
-          <t-button variant="outline">
-            <template #icon><component :is="currentViewIcon" /></template>
-            {{ currentViewText }}
-          </t-button>
-        </t-dropdown>
-      </div>
-    </div>
 
-    <!-- 统计信息 -->
-    <div class="stats-bar">
-      <div class="stats-item">
-        <span class="stats-label">总计:</span>
-        <span class="stats-value">{{ pagination.total }} 张图片</span>
-      </div>
-      <div class="stats-item">
-        <span class="stats-label">已选择:</span>
-        <span class="stats-value">{{ selectedImages.length }} 张</span>
-      </div>
-      <div class="stats-item">
-        <span class="stats-label">存储大小:</span>
-        <span class="stats-value">{{ formatFileSize(totalSize) }}</span>
-      </div>
-      <div class="stats-actions" v-if="selectedImages.length > 0">
-        <t-button size="small" theme="primary" @click="batchCopyLinks">
-          <template #icon><CopyIcon /></template>
-          批量复制链接
-        </t-button>
-        <t-button size="small" theme="danger" @click="batchDelete">
-          <template #icon><TrashIcon /></template>
-          批量删除
-        </t-button>
-      </div>
-    </div>
 
-    <!-- 图片列表 -->
-    <div class="image-container">
-      <!-- 网格视图 -->
-      <div v-if="viewMode === 'grid'" class="grid-view">
-        <div 
-          v-for="image in imageList" 
-          :key="image.id"
-          class="image-card"
-        >
-          <!-- 图片预览 -->
-          <div class="image-preview" @click="showPreview(image)">
-            <img 
-              v-if="image.url" 
-              :src="getImageUrl(image.url)" 
-              :alt="image.originalName"
-              class="preview-image"
-              @error="handleImageError"
-              @load="handleImageLoad"
-            />
-            <div v-else class="preview-placeholder">
-              <ImageIcon class="placeholder-icon" />
-            </div>
-          </div>
-
-          <!-- 图片信息 -->
-          <div class="image-info">
-            <p class="image-name" :title="image.originalName">
-              {{ image.originalName || '未知文件名' }}
-            </p>
-            <div class="image-meta">
-              <span class="meta-item">{{ formatFileSize(image.size || 0) }}</span>
-              <span class="meta-item" v-if="image.width && image.height">
-                {{ image.width }}×{{ image.height }}
-              </span>
-              <span class="meta-item">{{ formatDate(image.createdAt) }}</span>
-            </div>
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="image-actions">
-            <t-button size="small" theme="primary" variant="outline" @click="copyToClipboard(image.url)" :disabled="!image.url">
-              <template #icon><CopyIcon /></template>
-              复制链接
-            </t-button>
-            <t-button size="small" theme="default" variant="outline" @click="showPreview(image)">
-              <template #icon><EyeIcon /></template>
-              预览
-            </t-button>
-            <t-button size="small" theme="default" variant="outline" @click="downloadImage(image)">
-              <template #icon><DownloadIcon /></template>
-              下载
-            </t-button>
-            <t-button size="small" theme="danger" variant="outline" @click="confirmDelete(image.id)" :disabled="!image.id">
-              <template #icon><TrashIcon /></template>
-              删除
-            </t-button>
-          </div>
+    <!-- 图片网格 - 手机相册风格 -->
+    <div class="image-gallery" v-if="!isLoading && imageList.length > 0">
+      <div 
+        v-for="(image, index) in imageList" 
+        :key="image.id"
+        class="gallery-item"
+        @click="openImageViewer(index)"
+        @contextmenu.prevent="showContextMenu($event, image, index)"
+      >
+        <!-- 图片 -->
+        <img 
+          v-if="image.url" 
+          :src="getImageUrl(image.url)" 
+          :alt="image.originalName"
+          class="gallery-image"
+          @error="handleImageError"
+          @load="handleImageLoad"
+        />
+        <div v-else class="image-placeholder">
+          <ImageIcon class="placeholder-icon" />
         </div>
       </div>
+    </div>
 
-      <!-- 列表视图 -->
-      <div v-else class="list-view">
-        <t-table
-          :data="imageList"
-          :columns="tableColumns"
-          :loading="isLoading"
-          :pagination="tablePagination"
-          row-key="id"
-          :selected-row-keys="selectedImages"
-          @select-change="handleTableSelection"
-          @page-change="handlePageChange"
-        >
-          <template #preview="{ row }">
-            <div class="table-preview">
-              <img 
-                v-if="row.url" 
-                :src="getImageUrl(row.url)" 
-                :alt="row.originalName"
-                class="table-image"
-                @error="handleImageError"
-                @click="showPreview(row)"
-                @load="handleImageLoad"
-              />
-              <div v-else class="table-placeholder">
-                <ImageIcon class="placeholder-icon" />
-              </div>
-            </div>
-          </template>
+    <!-- 空状态 -->
+    <div v-if="!isLoading && imageList.length === 0" class="empty-state">
+      <ImageIcon class="empty-icon" />
+      <h3 class="empty-title">暂无图片</h3>
+      <p class="empty-desc">还没有上传任何图片，去上传一些图片吧！</p>
+      <t-button theme="primary" @click="$router.push('/upload')">
+        <template #icon><UploadIcon /></template>
+        上传图片
+      </t-button>
+    </div>
 
-          <template #name="{ row }">
-            <div class="table-name">
-              <p class="name-text" :title="row.originalName">{{ row.originalName || '未知文件名' }}</p>
-              <p class="name-meta">{{ row.filename }}</p>
-            </div>
-          </template>
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading-state">
+      <t-loading size="large" :text="'加载中...'" />
+    </div>
 
-          <template #size="{ row }">
-            <span>{{ formatFileSize(row.size || 0) }}</span>
-          </template>
+    <!-- 分页 -->
+    <div class="pagination-container" v-if="!isLoading && imageList.length > 0">
+      <t-pagination
+        v-model:current="pagination.page"
+        v-model:page-size="pagination.limit"
+        :total="pagination.total"
+        :page-size-options="[16, 32, 64, 128]"
+        show-jumper
+        show-sizer
+        @change="handlePageChange"
+      />
+    </div>
 
-          <template #dimensions="{ row }">
-            <span v-if="row.width && row.height">{{ row.width }}×{{ row.height }}</span>
-            <span v-else>-</span>
-          </template>
+    <!-- TDesign ImageViewer 图片预览器 -->
+    <t-image-viewer
+      v-model:visible="imageViewerVisible"
+      :images="imageUrls"
+      :index="currentImageIndex"
+      @index-change="handleImageIndexChange"
+    />
 
-          <template #uploadType="{ row }">
-            <t-tag :theme="row.uploadType === 'local' ? 'primary' : 'success'" size="small">
-              {{ row.uploadType === 'local' ? '本地上传' : '网络转存' }}
-            </t-tag>
-          </template>
-
-          <template #createdAt="{ row }">
-            <span>{{ formatDate(row.createdAt) }}</span>
-          </template>
-
-          <template #actions="{ row }">
-            <div class="table-actions">
-              <t-button size="small" variant="text" @click="copyToClipboard(row.url)" :disabled="!row.url">
-                <template #icon><CopyIcon /></template>
-                复制
-              </t-button>
-              <t-button size="small" variant="text" @click="showPreview(row)">
-                <template #icon><EyeIcon /></template>
-                预览
-              </t-button>
-              <t-button size="small" variant="text" @click="downloadImage(row)">
-                <template #icon><DownloadIcon /></template>
-                下载
-              </t-button>
-              <t-button size="small" variant="text" theme="danger" @click="confirmDelete(row.id)" :disabled="!row.id">
-                <template #icon><TrashIcon /></template>
-                删除
-              </t-button>
-            </div>
-          </template>
-        </t-table>
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+      @click.stop
+    >
+      <div class="menu-item" @click="copyImageLink">
+        <CopyIcon class="menu-icon" />
+        <span>复制图片链接</span>
       </div>
-
-      <!-- 空状态 -->
-      <div v-if="!isLoading && imageList.length === 0" class="empty-state">
-        <ImageIcon class="empty-icon" />
-        <h3 class="empty-title">暂无图片</h3>
-        <p class="empty-desc">还没有上传任何图片，去上传一些图片吧！</p>
-        <t-button theme="primary" @click="$router.push('/upload')">
-          <template #icon><UploadIcon /></template>
-          上传图片
-        </t-button>
+      <div class="menu-item" @click="openInNewWindow">
+        <ExternalLinkIcon class="menu-icon" />
+        <span>新窗口打开</span>
+      </div>
+      <div class="menu-item" @click="showImageDetails">
+        <InfoIcon class="menu-icon" />
+        <span>查看详情</span>
+      </div>
+      <div class="menu-item" @click="downloadCurrentImage">
+        <DownloadIcon class="menu-icon" />
+        <span>下载图片</span>
+      </div>
+      <div class="menu-divider"></div>
+      <div class="menu-item danger" @click="deleteCurrentImage">
+        <TrashIcon class="menu-icon" />
+        <span>删除图片</span>
       </div>
     </div>
 
-    <!-- 图片预览弹窗 -->
+    <!-- 右键菜单背景遮罩 -->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu-overlay"
+      @click="closeContextMenu"
+    ></div>
+
+    <!-- 图片详情弹窗 -->
     <t-dialog
-      v-model:visible="previewVisible"
-      :header="previewImage?.originalName || '图片预览'"
-      width="80%"
-      :footer="false"
-      @close="closePreview"
+      v-model:visible="detailsVisible"
+      :header="currentContextImage?.originalName || '图片详情'"
+      width="600px"
+      :footer="null"
     >
-      <div class="preview-dialog" v-if="previewImage">
-        <div class="preview-content">
+      <div class="image-details" v-if="currentContextImage">
+        <div class="details-preview">
           <img 
-            :src="getImageUrl(previewImage.url)" 
-            :alt="previewImage.originalName"
-            class="preview-full-image"
-            @error="handleImageError"
-            @load="handleImageLoad"
+            :src="getImageUrl(currentContextImage.url)" 
+            :alt="currentContextImage.originalName"
+            class="details-image"
           />
         </div>
-        <div class="preview-info">
+        <div class="details-info">
           <div class="info-row">
             <span class="info-label">文件名:</span>
-            <span class="info-value">{{ previewImage.originalName }}</span>
+            <span class="info-value">{{ currentContextImage.originalName }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">文件大小:</span>
-            <span class="info-value">{{ formatFileSize(previewImage.size || 0) }}</span>
+            <span class="info-value">{{ formatFileSize(currentContextImage.size || 0) }}</span>
           </div>
-          <div class="info-row" v-if="previewImage.width && previewImage.height">
+          <div class="info-row" v-if="currentContextImage.width && currentContextImage.height">
             <span class="info-label">图片尺寸:</span>
-            <span class="info-value">{{ previewImage.width }}×{{ previewImage.height }}</span>
+            <span class="info-value">{{ currentContextImage.width }}×{{ currentContextImage.height }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">上传时间:</span>
-            <span class="info-value">{{ formatDate(previewImage.createdAt) }}</span>
+            <span class="info-value">{{ formatDate(currentContextImage.createdAt) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">上传类型:</span>
+            <span class="info-value">
+              <t-tag :theme="currentContextImage.uploadType === 'local' ? 'primary' : 'success'" size="small">
+                {{ currentContextImage.uploadType === 'local' ? '本地上传' : '网络转存' }}
+              </t-tag>
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">图片链接:</span>
             <div class="link-row">
               <t-input 
-                :value="previewImage.url" 
+                :value="currentContextImage.url" 
                 readonly 
                 class="link-input"
               />
-              <t-button @click="copyToClipboard(previewImage.url)">
+              <t-button @click="copyToClipboard(currentContextImage.url)">
                 <template #icon><CopyIcon /></template>
                 复制
               </t-button>
@@ -281,19 +195,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   SearchIcon,
-  FilterIcon,
-  GridIcon,
-  ListIcon,
   ImageIcon,
   CopyIcon,
   TrashIcon,
-  EyeIcon,
   DownloadIcon,
-  UploadIcon
+  UploadIcon,
+  ExternalLinkIcon,
+  InfoIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
@@ -304,116 +216,39 @@ const router = useRouter()
 const isLoading = ref(false)
 const searchQuery = ref('')
 const searchTimeout = ref<number | null>(null)
-const viewMode = ref<'grid' | 'list'>('grid')
-const selectedImages = ref<number[]>([])
 const imageList = ref<any[]>([])
-const previewVisible = ref(false)
-const previewImage = ref<any>(null)
 const totalSize = ref(0)
+
+// 图片预览器相关
+const imageViewerVisible = ref(false)
+const currentImageIndex = ref(0)
+
+// 右键菜单相关
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const currentContextImage = ref<any>(null)
+const currentContextIndex = ref(0)
+
+// 详情弹窗
+const detailsVisible = ref(false)
+
+// 删除确认
 const deleteDialogVisible = ref(false)
 const imageToDelete = ref<any>(null)
 
-// 分页数据
+// 分页数据 - 每页32张图片
 const pagination = ref({
   page: 1,
-  limit: 24,
+  limit: 32,
   total: 0,
   totalPages: 0
 })
 
-// 筛选选项
-const filterOptions = [
-  { content: '全部图片', value: 'all' },
-  { content: '本地上传', value: 'local' },
-  { content: '网络转存', value: 'transfer' },
-  { content: '今天上传', value: 'today' },
-  { content: '本周上传', value: 'week' },
-  { content: '本月上传', value: 'month' }
-]
-
-// 视图选项
-const viewOptions = [
-  { content: '网格视图', value: 'grid', icon: GridIcon },
-  { content: '列表视图', value: 'list', icon: ListIcon }
-]
-
-// 表格列配置
-const tableColumns = [
-  {
-    colKey: 'preview',
-    title: '预览',
-    width: 80,
-    align: 'center'
-  },
-  {
-    colKey: 'name',
-    title: '文件名',
-    minWidth: 200
-  },
-  {
-    colKey: 'size',
-    title: '大小',
-    width: 100,
-    align: 'right'
-  },
-  {
-    colKey: 'dimensions',
-    title: '尺寸',
-    width: 120,
-    align: 'center'
-  },
-  {
-    colKey: 'uploadType',
-    title: '类型',
-    width: 100,
-    align: 'center'
-  },
-  {
-    colKey: 'createdAt',
-    title: '上传时间',
-    width: 160,
-    align: 'center'
-  },
-  {
-    colKey: 'actions',
-    title: '操作',
-    width: 200,
-    align: 'center'
-  }
-]
-
 // 计算属性
-const currentViewIcon = computed(() => {
-  return viewMode.value === 'grid' ? GridIcon : ListIcon
+const imageUrls = computed(() => {
+  return imageList.value.map(image => getImageUrl(image.url)).filter(url => url)
 })
-
-const currentViewText = computed(() => {
-  return viewMode.value === 'grid' ? '网格视图' : '列表视图'
-})
-
-const tablePagination = computed(() => ({
-  current: pagination.value.page,
-  pageSize: pagination.value.limit,
-  total: pagination.value.total,
-  showJumper: true,
-  showSizer: true,
-  pageSizeOptions: [12, 24, 48, 96]
-}))
-
-// 切换选择
-const toggleSelection = (imageId: number) => {
-  const index = selectedImages.value.indexOf(imageId)
-  if (index > -1) {
-    selectedImages.value.splice(index, 1)
-  } else {
-    selectedImages.value.push(imageId)
-  }
-}
-
-// 处理表格选择
-const handleTableSelection = (selectedRowKeys: number[]) => {
-  selectedImages.value = selectedRowKeys
-}
 
 // 处理搜索
 const handleSearch = () => {
@@ -421,23 +256,72 @@ const handleSearch = () => {
   loadImages()
 }
 
-// 处理筛选
-const handleFilterClick = (data: any) => {
-  // TODO: 实现筛选逻辑
-  MessagePlugin.info(`筛选: ${data.content}`)
-}
-
-// 处理视图切换
-const handleViewChange = (data: any) => {
-  viewMode.value = data.value
-  localStorage.setItem('imageViewMode', data.value)
-}
-
 // 处理分页
 const handlePageChange = (pageInfo: any) => {
   pagination.value.page = pageInfo.current
   pagination.value.limit = pageInfo.pageSize
   loadImages()
+}
+
+// 打开图片预览器
+const openImageViewer = (index: number) => {
+  currentImageIndex.value = index
+  imageViewerVisible.value = true
+}
+
+// 处理图片预览器索引变化
+const handleImageIndexChange = (index: number) => {
+  currentImageIndex.value = index
+}
+
+// 显示右键菜单
+const showContextMenu = (event: MouseEvent, image: any, index: number) => {
+  currentContextImage.value = image
+  currentContextIndex.value = index
+  
+  // 设置菜单位置
+  contextMenuX.value = event.clientX
+  contextMenuY.value = event.clientY
+  contextMenuVisible.value = true
+}
+
+// 关闭右键菜单
+const closeContextMenu = () => {
+  contextMenuVisible.value = false
+}
+
+// 右键菜单操作
+const copyImageLink = () => {
+  if (currentContextImage.value?.url) {
+    copyToClipboard(currentContextImage.value.url)
+  }
+  closeContextMenu()
+}
+
+const openInNewWindow = () => {
+  if (currentContextImage.value?.url) {
+    window.open(getImageUrl(currentContextImage.value.url), '_blank')
+  }
+  closeContextMenu()
+}
+
+const showImageDetails = () => {
+  detailsVisible.value = true
+  closeContextMenu()
+}
+
+const downloadCurrentImage = () => {
+  if (currentContextImage.value) {
+    downloadImage(currentContextImage.value)
+  }
+  closeContextMenu()
+}
+
+const deleteCurrentImage = () => {
+  if (currentContextImage.value) {
+    confirmDelete(currentContextImage.value.id)
+  }
+  closeContextMenu()
 }
 
 // 加载图片列表
@@ -457,12 +341,10 @@ const loadImages = async () => {
         ...response.data.pagination
       }
       
-
       // 计算总大小
       totalSize.value = imageList.value.reduce((sum, img) => sum + (img.size || 0), 0)
     }
   } catch (error) {
-
     MessagePlugin.error('加载图片列表失败')
   } finally {
     isLoading.value = false
@@ -486,7 +368,6 @@ const handleConfirmDelete = async () => {
     const response = await apiService.deleteImage(imageToDelete.value.id)
     if (response.success) {
       imageList.value = imageList.value.filter(img => img.id !== imageToDelete.value.id)
-      selectedImages.value = selectedImages.value.filter(imgId => imgId !== imageToDelete.value.id)
       pagination.value.total -= 1
       MessagePlugin.success('图片删除成功')
     } else {
@@ -506,71 +387,12 @@ const handleCancelDelete = () => {
   imageToDelete.value = null
 }
 
-// 删除图片（保留原函数供批量删除使用）
-const deleteImage = async (id: number) => {
-  try {
-    const response = await apiService.deleteImage(id)
-    if (response.success) {
-      imageList.value = imageList.value.filter(img => img.id !== id)
-      selectedImages.value = selectedImages.value.filter(imgId => imgId !== id)
-      pagination.value.total -= 1
-      MessagePlugin.success('图片删除成功')
-    } else {
-      MessagePlugin.error('删除失败: ' + response.message)
-    }
-  } catch (error: any) {
-    MessagePlugin.error('删除失败: ' + error.message)
-  }
-}
-
-// 批量删除
-const batchDelete = async () => {
-  if (selectedImages.value.length === 0) {
-    MessagePlugin.warning('请先选择要删除的图片')
-    return
-  }
-
-  // TODO: 实现批量删除API
-  for (const id of selectedImages.value) {
-    await deleteImage(id)
-  }
-  
-  selectedImages.value = []
-}
-
-// 批量复制链接
-const batchCopyLinks = () => {
-  if (selectedImages.value.length === 0) {
-    MessagePlugin.warning('请先选择要复制的图片')
-    return
-  }
-
-  const links = selectedImages.value
-    .map(id => imageList.value.find(img => img.id === id)?.url)
-    .filter(url => url)
-    .join('\n')
-
-  copyToClipboard(links)
-}
-
-// 预览图片
-const showPreview = (image: any) => {
-  previewImage.value = image
-  previewVisible.value = true
-}
-
-// 关闭预览
-const closePreview = () => {
-  previewVisible.value = false
-  previewImage.value = null
-}
-
 // 下载图片
 const downloadImage = (image: any) => {
   if (!image.url) return
   
   const link = document.createElement('a')
-  link.href = image.url
+  link.href = getImageUrl(image.url)
   link.download = image.originalName || image.filename
   link.target = '_blank'
   document.body.appendChild(link)
@@ -584,7 +406,6 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text)
     MessagePlugin.success('链接已复制到剪贴板')
   } catch (error) {
-
     MessagePlugin.error('复制失败')
   }
 }
@@ -632,10 +453,9 @@ const handleImageLoad = (e: Event) => {
   // 图片加载成功
 }
 
-// 图片加载错误处理 - 直接显示错误占位符
+// 图片加载错误处理
 const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
-
   
   // 隐藏图片并显示占位符
   img.style.display = 'none'
@@ -673,28 +493,42 @@ watch(searchQuery, () => {
 
 // 组件挂载时执行
 onMounted(() => {
-  // 恢复视图模式
-  const savedViewMode = localStorage.getItem('imageViewMode')
-  if (savedViewMode && ['grid', 'list'].includes(savedViewMode)) {
-    viewMode.value = savedViewMode as 'grid' | 'list'
-  }
-  
   loadImages()
 })
 </script>
 
+<style>
+/* 全局样式覆盖 - 仅对图片管理页面生效 */
+.layout-main .main-content:has(.manage-page) {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 如果不支持:has选择器，使用更直接的方法 */
+.main-content {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+</style>
+
 <style scoped>
 .manage-page {
-  max-width: 1400px;
-  margin: 0 auto;
   padding: 0;
+  margin: 0;
+  
+  background-color: var(--td-bg-color-page);
+  position: relative;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  padding: 24px;
+  background-color: var(--td-bg-color-container);
+  border-bottom: 1px solid var(--td-border-level-1-color);
   gap: 24px;
 }
 
@@ -732,13 +566,12 @@ onMounted(() => {
 
 .stats-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  padding: 16px 20px;
+  gap: 32px;
+  padding: 16px 24px;
   background-color: var(--td-bg-color-container);
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border: 1px solid var(--td-border-level-1-color);
+  border-bottom: 1px solid var(--td-border-level-1-color);
 }
 
 .stats-item {
@@ -757,178 +590,111 @@ onMounted(() => {
   color: var(--td-text-color-primary);
 }
 
-.stats-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.image-container {
-  min-height: 400px;
-}
-
-/* 网格视图样式 */
-.grid-view {
+/* 图片画廊 - 手机相册风格，真正全屏 */
+.image-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.image-card {
-  position: relative;
-  background-color: var(--td-bg-color-container);
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--td-border-level-1-color);
-  transition: all 0.3s ease;
-  box-shadow: var(--td-shadow-1);
-}
-
-.image-card:hover {
-  border-color: var(--td-brand-color-light);
-  box-shadow: var(--td-shadow-2);
-  transform: translateY(-2px);
-}
-
-.image-preview {
-  position: relative;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  padding: 0;
+  margin: 0;
   width: 100%;
-  height: 200px;
+}
+
+.gallery-item {
+  position: relative;
+  aspect-ratio: 1;
   background-color: var(--td-bg-color-component);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   overflow: hidden;
+  border: 1px solid var(--td-border-level-1-color);
+  transition: all 0.2s ease;
 }
 
-.preview-image {
+.gallery-item:hover {
+  z-index: 1;
+  transform: scale(1.02);
+  box-shadow: var(--td-shadow-2);
+}
+
+.gallery-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  display: block;
 }
 
-.image-preview:hover .preview-image {
-  transform: scale(1.05);
-}
-
-.preview-placeholder {
+.image-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   color: var(--td-text-color-placeholder);
+  background-color: var(--td-bg-color-component);
 }
 
 .placeholder-icon {
-  width: 48px;
-  height: 48px;
-}
-
-.image-info {
-  padding: 16px;
-}
-
-.image-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-  margin: 0 0 8px 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.image-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
-}
-
-.meta-item {
-  background-color: var(--td-bg-color-component);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.image-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 16px;
-  border-top: 1px solid var(--td-border-level-1-color);
-  background-color: var(--td-bg-color-secondarycontainer);
-}
-
-.image-actions .t-button {
-  font-size: 12px;
+  width: 32px;
   height: 32px;
 }
 
-/* 列表视图样式 */
-.list-view {
+/* 右键菜单 */
+.context-menu {
+  position: fixed;
   background-color: var(--td-bg-color-container);
+  border: 1px solid var(--td-border-level-1-color);
   border-radius: 8px;
-  overflow: hidden;
+  box-shadow: var(--td-shadow-3);
+  padding: 8px 0;
+  min-width: 160px;
+  z-index: 1000;
 }
 
-.table-preview {
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: transparent;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.table-image {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 8px 16px;
   cursor: pointer;
-}
-
-.table-placeholder {
-  width: 40px;
-  height: 40px;
-  background-color: var(--td-bg-color-component);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--td-text-color-placeholder);
-}
-
-.table-name {
-  min-width: 0;
-}
-
-.name-text {
   font-size: 14px;
-  font-weight: 500;
   color: var(--td-text-color-primary);
-  margin: 0 0 4px 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  transition: background-color 0.2s ease;
 }
 
-.name-meta {
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.menu-item:hover {
+  background-color: var(--td-bg-color-container-hover);
 }
 
-.table-actions {
-  display: flex;
-  gap: 4px;
+.menu-item.danger {
+  color: var(--td-error-color);
 }
 
-/* 空状态样式 */
+.menu-item.danger:hover {
+  background-color: var(--td-error-color-light);
+}
+
+.menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.menu-divider {
+  height: 1px;
+  background-color: var(--td-border-level-1-color);
+  margin: 4px 0;
+}
+
+/* 空状态 */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -958,30 +724,47 @@ onMounted(() => {
   margin: 0 0 24px 0;
 }
 
-/* 预览弹窗样式 */
-.preview-dialog {
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 20px;
+}
+
+/* 分页 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--td-bg-color-container);
+  border-top: 1px solid var(--td-border-level-1-color);
+}
+
+/* 图片详情弹窗 */
+.image-details {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.preview-content {
+.details-preview {
   display: flex;
   justify-content: center;
   align-items: center;
-  max-height: 60vh;
+  max-height: 300px;
   overflow: hidden;
   border-radius: 8px;
   background-color: var(--td-bg-color-component);
 }
 
-.preview-full-image {
+.details-image {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
 
-.preview-info {
+.details-info {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1014,7 +797,7 @@ onMounted(() => {
   flex: 1;
 }
 
-/* 删除确认对话框样式 */
+/* 删除确认对话框 */
 .delete-dialog-content {
   display: flex;
   flex-direction: column;
@@ -1092,10 +875,15 @@ onMounted(() => {
 }
 
 /* 响应式设计 */
+@media (max-width: 1600px) {
+  .image-gallery {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+  .image-gallery {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -1107,7 +895,6 @@ onMounted(() => {
   
   .header-right {
     width: 100%;
-    flex-wrap: wrap;
   }
   
   .search-input {
@@ -1120,23 +907,14 @@ onMounted(() => {
     align-items: stretch;
   }
   
-  .stats-actions {
-    justify-content: center;
+  .image-gallery {
+    grid-template-columns: repeat(3, 1fr);
   }
-  
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-  }
-  
-  .image-actions {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  
-  .table-actions {
-    flex-direction: column;
-    gap: 4px;
+}
+
+@media (max-width: 480px) {
+  .image-gallery {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

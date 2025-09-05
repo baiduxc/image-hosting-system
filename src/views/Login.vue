@@ -44,14 +44,17 @@
             :rules="loginRules"
             layout="vertical"
             :colon="false"
+            :show-error-message="false"
+            :required-mark="false"
             @submit="handleLogin"
           >
-            <t-form-item label="用户名/邮箱" name="username">
+            <t-form-item name="username" class="form-item-no-label">
               <t-input
                 v-model="loginData.username"
-                placeholder="请输入用户名或邮箱地址"
+                placeholder="用户名或邮箱地址"
                 size="large"
                 :disabled="isLoading"
+                class="form-input"
               >
                 <template #prefix-icon>
                   <MailIcon class="input-icon" />
@@ -59,13 +62,14 @@
               </t-input>
             </t-form-item>
 
-            <t-form-item label="密码" name="password">
+            <t-form-item name="password" class="form-item-no-label">
               <t-input
                 v-model="loginData.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="密码"
                 size="large"
                 :disabled="isLoading"
+                class="form-input"
               >
                 <template #prefix-icon>
                   <LockIcon class="input-icon" />
@@ -403,6 +407,43 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   color: var(--td-text-color-placeholder);
+}
+
+/* 隐藏表单项标签和必填标记 */
+.form-item-no-label :deep(.t-form__label) {
+  display: none !important;
+}
+
+.form-item-no-label :deep(.t-form__controls) {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+.form-item-no-label :deep(.t-form__item) {
+  margin-left: 0 !important;
+}
+
+.form-item-no-label {
+  margin-bottom: 20px;
+  margin-left: 0 !important;
+}
+
+/* 隐藏必填标记 */
+:deep(.t-form__label-required) {
+  display: none !important;
+}
+
+:deep(.t-form__label::before) {
+  display: none !important;
+}
+
+/* 确保表单项没有左边距 */
+:deep(.t-form__item) {
+  margin-left: 0 !important;
+}
+
+:deep(.t-form__controls) {
+  margin-left: 0 !important;
 }
 
 .form-options {

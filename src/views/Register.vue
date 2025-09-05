@@ -61,12 +61,14 @@
             :rules="registerRules"
             layout="vertical"
             :colon="false"
+            :show-error-message="false"
+            :required-mark="false"
             @submit="handleRegister"
           >
-            <t-form-item label="用户名" name="username">
+            <t-form-item name="username" class="form-item-no-label">
               <t-input
                 v-model="registerData.username"
-                placeholder="请输入用户名"
+                placeholder="用户名"
                 size="large"
                 :disabled="isLoading"
               >
@@ -76,10 +78,10 @@
               </t-input>
             </t-form-item>
 
-            <t-form-item label="邮箱" name="email">
+            <t-form-item name="email" class="form-item-no-label">
               <t-input
                 v-model="registerData.email"
-                placeholder="请输入邮箱地址"
+                placeholder="邮箱地址"
                 size="large"
                 :disabled="isLoading"
               >
@@ -89,11 +91,11 @@
               </t-input>
             </t-form-item>
 
-            <t-form-item label="密码" name="password">
+            <t-form-item name="password" class="form-item-no-label">
               <t-input
                 v-model="registerData.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="密码"
                 size="large"
                 :disabled="isLoading"
               >
@@ -115,11 +117,11 @@
               </div>
             </t-form-item>
 
-            <t-form-item label="确认密码" name="confirmPassword">
+            <t-form-item name="confirmPassword" class="form-item-no-label">
               <t-input
                 v-model="registerData.confirmPassword"
                 type="password"
-                placeholder="请再次输入密码"
+                placeholder="确认密码"
                 size="large"
                 :disabled="isLoading"
                 @keyup.enter="handleRegister"
@@ -456,8 +458,14 @@ watch(() => registerData.password, () => {
 })
 
 // 生命周期
-onMounted(() => {
-  checkRegistrationStatus()
+onMounted(async () => {
+  await checkRegistrationStatus()
+  
+  // 如果不允许注册，跳转到登录页
+  if (!registrationAllowed.value) {
+    MessagePlugin.warning('注册功能已关闭，请联系管理员')
+    router.push('/login')
+  }
 })
 </script>
 
@@ -583,12 +591,65 @@ onMounted(() => {
   color: var(--td-text-color-placeholder);
 }
 
+/* 隐藏表单项标签和必填标记 */
+.form-item-no-label :deep(.t-form__label) {
+  display: none !important;
+}
+
+.form-item-no-label :deep(.t-form__controls) {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+.form-item-no-label :deep(.t-form__item) {
+  margin-left: 0 !important;
+}
+
+.form-item-no-label {
+  margin-bottom: 20px;
+  margin-left: 0 !important;
+}
+
+/* 隐藏必填标记 */
+:deep(.t-form__label-required) {
+  display: none !important;
+}
+
+:deep(.t-form__label::before) {
+  display: none !important;
+}
+
+/* 确保表单项没有左边距 */
+:deep(.t-form__item) {
+  margin-left: 0 !important;
+}
+
+:deep(.t-form__controls) {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* 确保所有输入框宽度一致 */
+:deep(.t-input) {
+  width: 100% !important;
+}
+
+:deep(.t-input__inner) {
+  width: 100% !important;
+}
+
+/* 特别处理密码输入框容器 */
+.form-item-no-label:has(.password-strength) :deep(.t-form__controls) {
+  width: 100% !important;
+}
+
 /* 密码强度样式 */
 .password-strength {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .strength-bar {
