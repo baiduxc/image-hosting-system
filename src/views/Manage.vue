@@ -99,6 +99,7 @@
       v-model:visible="imageViewerVisible"
       :images="imageUrls"
       :index="currentImageIndex"
+      :closeOnOverlay="true"
       @index-change="handleImageIndexChange"
     />
 
