@@ -39,7 +39,7 @@ export function useUpload() {
     uploadFiles.value = []
   }
 
-  // 上传文件到对象存储
+  // 上传文件到对象存储 - 前端分批异步上传版本
   const upload = async (storageId?: string) => {
     if (uploadFiles.value.length === 0) return
 
@@ -58,63 +58,116 @@ export function useUpload() {
         return
       }
 
+
+
       // 更新状态为uploading
       pendingFiles.forEach(f => {
         f.status = 'uploading'
         f.progress = 0
       })
 
-      // 将文件转换为base64格式
-      const filesData = await Promise.all(
-        pendingFiles.map(async (uploadFile) => {
-          return new Promise((resolve) => {
-            const reader = new FileReader()
-            reader.onload = () => {
-              resolve({
-                name: uploadFile.file.name,
-                size: uploadFile.file.size,
-                type: uploadFile.file.type,
-                data: reader.result
+      const batchSize = 3 // 每批上传3个文件
+      let completedCount = 0
+      let successCount = 0
+
+      // 分批处理文件
+      for (let i = 0; i < pendingFiles.length; i += batchSize) {
+        const batch = pendingFiles.slice(i, i + batchSize)
+        const batchNumber = Math.floor(i / batchSize) + 1
+        const totalBatches = Math.ceil(pendingFiles.length / batchSize)
+        
+
+
+        try {
+          // 将当前批次的文件转换为base64格式
+          const batchFilesData = await Promise.all(
+            batch.map(async (uploadFile, batchIndex) => {
+              return new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onload = () => {
+                  const globalIndex = i + batchIndex + 1
+                  resolve({
+                    name: uploadFile.file.name,
+                    size: uploadFile.file.size,
+                    type: uploadFile.file.type,
+                    data: reader.result
+                  })
+                }
+                reader.readAsDataURL(uploadFile.file)
               })
-            }
-            reader.readAsDataURL(uploadFile.file)
-          })
-        })
-      )
+            })
+          )
 
-      // 调用新的对象存储上传API
-      const response = await apiService.uploadToStorage(filesData, storageId)
 
-      if (response.success && response.data) {
-        // 更新上传成功的文件状态
-        response.data.forEach((uploadedFile, index) => {
-          const fileItem = pendingFiles[index]
-          if (fileItem) {
-            fileItem.status = 'success'
-            fileItem.progress = 100
-            fileItem.url = uploadedFile.url
+
+          // 调用后端API上传当前批次
+          const response = await apiService.uploadToStorage(batchFilesData, storageId)
+
+          if (response.success && response.data) {
+            
+            // 处理当前批次的上传结果
+            response.data.forEach((uploadedFile, batchIndex) => {
+              const fileItem = batch[batchIndex]
+              if (fileItem) {
+                if (uploadedFile.success !== false && uploadedFile.url) {
+                  // 上传成功
+                  fileItem.status = 'success'
+                  fileItem.progress = 100
+                  fileItem.url = uploadedFile.url
+                  successCount++
+                } else {
+                  // 上传失败
+                  fileItem.status = 'error'
+                  fileItem.progress = 0
+                  fileItem.error = uploadedFile.error || '上传失败'
+                }
+                completedCount++
+              }
+            })
+            
+          } else {
+            // 当前批次上传失败
+            batch.forEach(f => {
+              f.status = 'error'
+              f.progress = 0
+              f.error = response.message || '上传失败'
+              completedCount++
+            })
           }
-        })
-      } else {
-        // 上传失败
-        pendingFiles.forEach(f => {
-          f.status = 'error'
-          f.error = response.message || '上传失败'
-        })
+
+        } catch (error: any) {
+          
+          // 当前批次出错
+          batch.forEach(f => {
+            f.status = 'error'
+            f.progress = 0
+            f.error = error.message || '网络错误或请求超时'
+            completedCount++
+          })
+        }
+
+        // 更新总体进度
+        uploadProgress.value = Math.round((completedCount / pendingFiles.length) * 100)
+
+        // 如果不是最后一批，稍微延迟一下避免请求过于频繁
+        if (i + batchSize < pendingFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
       }
 
     } catch (error: any) {
-
+      
       // 更新所有uploading状态的文件为error
       uploadFiles.value.forEach(f => {
         if (f.status === 'uploading') {
           f.status = 'error'
-          f.error = error.message || '上传失败'
+          f.progress = 0
+          f.error = error.message || '网络错误或请求超时'
         }
       })
+      uploadProgress.value = 0
     } finally {
       isUploading.value = false
-      uploadProgress.value = 100
     }
   }
 

@@ -146,7 +146,6 @@ router.beforeEach(async (to, from, next) => {
         }
       }
     } catch (error) {
-      console.error('获取系统配置失败:', error)
       // 如果获取配置失败，默认允许访问注册页面
     }
   }

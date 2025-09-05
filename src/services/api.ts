@@ -264,6 +264,27 @@ export const apiService = {
     return response.data
   },
 
+  // 批量删除图片
+  async batchDeleteImages(ids: number[]): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      total: number
+      success: number
+      failed: number
+      results: Array<{
+        id: number
+        success: boolean
+        message: string
+      }>
+    }
+  }> {
+    const response = await api.delete('/images', {
+      data: { ids }
+    })
+    return response.data
+  },
+
   // 获取统计数据
   async getStats(): Promise<StatsResponse> {
     const response = await api.get('/stats')

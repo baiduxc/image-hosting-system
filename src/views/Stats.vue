@@ -496,6 +496,7 @@ onUnmounted(() => {
 }
 
 .page-header {
+  margin-top: 30px;
   margin-bottom: 32px;
 }
 

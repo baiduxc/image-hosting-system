@@ -9,9 +9,17 @@
         v-for="(image, index) in imageList" 
         :key="image.id"
         class="gallery-item"
-        @click="openImageViewer(index)"
+        :class="{ 'selected': selectedImages.has(image.id) }"
+        @click="handleImageClick($event, image, index)"
         @contextmenu.prevent="showContextMenu($event, image, index)"
       >
+        <!-- 选择框 -->
+        <div class="selection-overlay" v-if="selectedImages.has(image.id)">
+          <div class="selection-checkbox">
+            <CheckIcon class="check-icon" />
+          </div>
+        </div>
+        
         <!-- 图片 -->
         <img 
           v-if="image.url" 
@@ -43,17 +51,47 @@
       <t-loading size="large" :text="'加载中...'" />
     </div>
 
-    <!-- 分页 -->
+    <!-- 分页和操作栏 -->
     <div class="pagination-container" v-if="!isLoading && imageList.length > 0">
-      <t-pagination
-        v-model:current="pagination.page"
-        v-model:page-size="pagination.limit"
-        :total="pagination.total"
-        :page-size-options="[16, 32, 64, 128]"
-        show-jumper
-        show-sizer
-        @change="handlePageChange"
-      />
+      <div class="pagination-left">
+        <!-- 批量操作按钮区域 -->
+        <div class="batch-actions">
+          <t-button 
+            
+            variant="outline"
+            @click="toggleSelectMode"
+            :theme="isSelectMode ? 'primary' : 'default'"
+          >
+            {{ isSelectMode ? '取消选择' : '选择' }}
+          </t-button>
+          
+          <t-button 
+            v-if="selectedImages.size > 0"
+            
+            theme="danger" 
+            variant="outline"
+            @click="handleBatchDelete"
+            :loading="batchDeleting"
+          >
+            删除 ({{ selectedImages.size }})
+          </t-button>
+        </div>
+      </div>
+      
+      <div class="pagination-right">
+        <!-- 统计信息和分页 -->
+        <div class="pagination-info">
+          
+          <t-pagination
+            v-model:current="pagination.page"
+            v-model:page-size="pagination.limit"
+            :total="pagination.total"
+            :page-size-options="[16, 32, 64, 128]"
+            :totalContent="false"
+            @change="handlePageChange"
+          />
+        </div>
+      </div>
     </div>
 
     <!-- TDesign ImageViewer 图片预览器 -->
@@ -150,7 +188,7 @@
                 class="link-input"
               />
               <t-button @click="copyToClipboard(currentContextImage.url)">
-                <template #icon><CopyIcon /></template>
+                
                 复制
               </t-button>
             </div>
@@ -191,6 +229,47 @@
         </div>
       </div>
     </t-dialog>
+
+    <!-- 批量删除确认对话框 -->
+    <t-dialog
+      v-model:visible="batchDeleteDialogVisible"
+      header="批量删除确认"
+      :confirm-btn="{ content: '确认删除', theme: 'danger', loading: batchDeleting }"
+      :cancel-btn="{ content: '取消', disabled: batchDeleting }"
+      @confirm="handleConfirmBatchDelete"
+      @cancel="handleCancelBatchDelete"
+    >
+      <div class="batch-delete-dialog-content">
+        <div class="delete-warning">
+          <TrashIcon class="warning-icon" />
+          <div class="warning-text">
+            <h4>确定要删除选中的 {{ selectedImages.size }} 张图片吗？</h4>
+            <p>删除后将无法恢复，请谨慎操作。</p>
+          </div>
+        </div>
+        
+        <!-- 选中图片预览 -->
+        <div class="batch-preview-container">
+          <div class="batch-preview-grid">
+            <div 
+              v-for="image in selectedImagesList.slice(0, 6)" 
+              :key="image.id"
+              class="batch-preview-item"
+            >
+              <img 
+                :src="getImageUrl(image.url)" 
+                :alt="image.originalName"
+                class="batch-preview-image"
+                @error="handleImageError"
+              />
+            </div>
+            <div v-if="selectedImages.size > 6" class="batch-preview-more">
+              +{{ selectedImages.size - 6 }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </t-dialog>
   </div>
 </template>
 
@@ -205,7 +284,8 @@ import {
   DownloadIcon,
   UploadIcon,
   ExternalLinkIcon,
-  InfoIcon
+  InfoIcon,
+  CheckIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
@@ -237,6 +317,12 @@ const detailsVisible = ref(false)
 const deleteDialogVisible = ref(false)
 const imageToDelete = ref<any>(null)
 
+// 批量选择和删除
+const selectedImages = ref(new Set<number>())
+const batchDeleteDialogVisible = ref(false)
+const batchDeleting = ref(false)
+const isSelectMode = ref(false)
+
 // 分页数据 - 每页32张图片
 const pagination = ref({
   page: 1,
@@ -250,6 +336,11 @@ const imageUrls = computed(() => {
   return imageList.value.map(image => getImageUrl(image.url)).filter(url => url)
 })
 
+// 选中的图片列表
+const selectedImagesList = computed(() => {
+  return imageList.value.filter(image => selectedImages.value.has(image.id))
+})
+
 // 处理搜索
 const handleSearch = () => {
   pagination.value.page = 1
@@ -261,6 +352,30 @@ const handlePageChange = (pageInfo: any) => {
   pagination.value.page = pageInfo.current
   pagination.value.limit = pageInfo.pageSize
   loadImages()
+}
+
+// 切换选择模式
+const toggleSelectMode = () => {
+  isSelectMode.value = !isSelectMode.value
+  if (!isSelectMode.value) {
+    // 退出选择模式时清空选中项
+    selectedImages.value.clear()
+  }
+}
+
+// 处理图片点击 - 支持多选
+const handleImageClick = (event: MouseEvent, image: any, index: number) => {
+  if (isSelectMode.value) {
+    // 选择模式下，点击切换选中状态
+    if (selectedImages.value.has(image.id)) {
+      selectedImages.value.delete(image.id)
+    } else {
+      selectedImages.value.add(image.id)
+    }
+  } else {
+    // 正常模式下预览图片
+    openImageViewer(index)
+  }
 }
 
 // 打开图片预览器
@@ -385,6 +500,53 @@ const handleConfirmDelete = async () => {
 const handleCancelDelete = () => {
   deleteDialogVisible.value = false
   imageToDelete.value = null
+}
+
+// 批量删除处理
+const handleBatchDelete = () => {
+  if (selectedImages.value.size === 0) {
+    MessagePlugin.warning('请先选择要删除的图片')
+    return
+  }
+  batchDeleteDialogVisible.value = true
+}
+
+// 确认批量删除
+const handleConfirmBatchDelete = async () => {
+  if (selectedImages.value.size === 0) return
+  
+  batchDeleting.value = true
+  try {
+    const idsToDelete = Array.from(selectedImages.value)
+    
+    const response = await apiService.batchDeleteImages(idsToDelete)
+    
+    if (response.success) {
+      // 从列表中移除已删除的图片
+      imageList.value = imageList.value.filter(img => !selectedImages.value.has(img.id))
+      pagination.value.total -= response.data?.success || 0
+      
+      // 清空选择
+      selectedImages.value.clear()
+      
+      MessagePlugin.success(response.message)
+    } else {
+      MessagePlugin.error('批量删除失败: ' + response.message)
+    }
+  } catch (error: any) {
+    MessagePlugin.error('批量删除失败: ' + error.message)
+  } finally {
+    batchDeleting.value = false
+    batchDeleteDialogVisible.value = false
+    // 批量删除完成后退出选择模式
+    isSelectMode.value = false
+    selectedImages.value.clear()
+  }
+}
+
+// 取消批量删除
+const handleCancelBatchDelete = () => {
+  batchDeleteDialogVisible.value = false
 }
 
 // 下载图片
@@ -597,7 +759,7 @@ onMounted(() => {
   gap: 0;
   padding: 0;
   margin: 0;
-  width: 100%;
+  width: calc(100% - 2px); /* 右侧留出2px，防止出现横向滚动条 */
 }
 
 .gallery-item {
@@ -614,6 +776,43 @@ onMounted(() => {
   z-index: 1;
   transform: scale(1.02);
   box-shadow: var(--td-shadow-2);
+}
+
+.gallery-item.selected {
+  border: 2px solid var(--td-brand-color);
+  box-shadow: 0 0 0 2px var(--td-brand-color-light);
+}
+
+/* 选择覆盖层 */
+.selection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(54, 110, 244, 0.2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px;
+  z-index: 2;
+}
+
+.selection-checkbox {
+  width: 24px;
+  height: 24px;
+  background-color: var(--td-brand-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--td-shadow-1);
+}
+
+.check-icon {
+  width: 14px;
+  height: 14px;
+  color: white;
 }
 
 .gallery-image {
@@ -732,13 +931,51 @@ onMounted(() => {
   padding: 80px 20px;
 }
 
-/* 分页 */
+/* 分页和操作栏 */
 .pagination-container {
   display: flex;
-  justify-content: center;
-  padding: 24px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
   background-color: var(--td-bg-color-container);
   border-top: 1px solid var(--td-border-level-1-color);
+}
+
+.pagination-left {
+  display: flex;
+  align-items: center;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 修复分页组件内部间距 */
+.pagination-info :deep(.t-pagination) {
+  margin-left: 16px;
+}
+
+.pagination-info :deep(.t-pagination__info) {
+  margin-right: 16px;
+}
+
+.stats-text {
+  font-size: 14px;
+  color: var(--td-text-color-secondary);
+  white-space: nowrap;
 }
 
 /* 图片详情弹窗 */
@@ -872,6 +1109,53 @@ onMounted(() => {
   margin: 0;
   font-size: 12px;
   color: var(--td-text-color-placeholder);
+}
+
+
+
+/* 批量删除对话框 */
+.batch-delete-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.batch-preview-container {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.batch-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.batch-preview-item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--td-border-level-1-color);
+}
+
+.batch-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.batch-preview-more {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--td-bg-color-component);
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--td-text-color-secondary);
 }
 
 /* 响应式设计 */

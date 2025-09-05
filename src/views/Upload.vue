@@ -6,289 +6,299 @@
       <p class="page-description">上传图片到对象存储和网络图片转存</p>
     </div>
 
-    <!-- 存储选择 -->
-    <t-card class="storage-selector-card" v-if="storageOptions.length > 0">
-      <div class="storage-selector">
-        <label class="storage-label">选择存储方式：</label>
-        <t-select 
-          v-model="selectedStorageId" 
-          :options="storageOptions"
-          placeholder="选择存储方式"
-          class="storage-select"
-        />
-        <span v-if="storageOptions.length === 1" class="storage-hint">
-          当前只有一个存储配置
-        </span>
-      </div>
-    </t-card>
-
-    <!-- 拖拽上传区域 -->
-    <t-card class="upload-card">
-      <div 
-        class="upload-area"
-        :class="{ 'drag-over': isDragOver }"
-        @drop="handleDrop"
-        @dragover="handleDragOver"
-        @dragenter="handleDragEnter"
-        @dragleave="handleDragLeave"
-      >
-        <div class="upload-content">
-          <UploadIcon class="upload-icon" />
-          <h3 class="upload-title">拖拽文件到此处上传</h3>
-          <p class="upload-desc">支持 JPG、PNG、GIF、WebP 格式，单个文件最大 10MB</p>
-          <input
-            ref="fileInput"
-            type="file"
-            multiple
-            accept="image/*"
-            class="hidden"
-            @change="handleFileSelect"
-          />
-          <t-button theme="primary" size="large" @click="fileInput?.click()">
-            <template #icon><FolderOpenIcon /></template>
-            选择文件
-          </t-button>
-        </div>
-      </div>
-    </t-card>
-
-    <!-- 上传文件列表 -->
-    <t-card v-if="uploadFiles.length > 0" class="upload-list-card">
-      <template #header>
-        <div class="list-header">
-          <h3 class="list-title">上传队列 ({{ uploadFiles.length }})</h3>
-          <div class="list-actions">
-            <t-button 
-              theme="primary" 
-              :loading="isUploading"
-              :disabled="uploadFiles.filter(f => f.status === 'pending').length === 0 || !selectedStorageId"
-              @click="upload(selectedStorageId)"
-            >
-              <template #icon><UploadIcon /></template>
-              {{ isUploading ? '上传中...' : '开始上传' }}
-            </t-button>
-            <t-button variant="outline" @click="clearFiles">
-              <template #icon><TrashIcon /></template>
-              清空列表
-            </t-button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 文件列表 -->
-      <div class="file-list">
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+      <!-- 拖拽上传区域 -->
+      <t-card class="upload-card">
         <div 
-          v-for="file in uploadFiles" 
-          :key="file.id"
-          class="file-item"
+          class="upload-area"
+          :class="{ 'drag-over': isDragOver }"
+          @drop="handleDrop"
+          @dragover="handleDragOver"
+          @dragenter="handleDragEnter"
+          @dragleave="handleDragLeave"
         >
-          <div class="file-info">
-            <div class="file-icon">
-              <ImageIcon />
-            </div>
-            <div class="file-details">
-              <p class="file-name">{{ file.file.name }}</p>
-              <p class="file-size">{{ formatFileSize(file.file.size) }}</p>
+          <div class="upload-content">
+            <UploadIcon class="upload-icon" />
+            <h3 class="upload-title">拖拽文件到此处上传</h3>
+            <p class="upload-desc">支持 JPG、PNG、GIF、WebP 格式，单个文件最大 10MB</p>
+            <input
+              ref="fileInput"
+              type="file"
+              multiple
+              accept="image/*"
+              class="hidden"
+              @change="handleFileSelect"
+            />
+            <div class="upload-actions">
+              <t-button theme="primary" size="large" @click="fileInput?.click()">
+                选择文件
+              </t-button>
             </div>
           </div>
+        </div>
+      </t-card>
 
-          <!-- 状态和进度 -->
-          <div class="file-status">
-            <div class="progress-area">
-              <div v-if="file.status === 'uploading'" class="progress-bar">
-                <t-progress 
-                  :percentage="file.progress" 
-                  size="small"
-                  :show-info="false"
-                />
-              </div>
-              <div v-else-if="file.status === 'success'" class="status-success">
-                <CheckCircleIcon class="status-icon" />
-                <span>上传成功</span>
-              </div>
-              <div v-else-if="file.status === 'error'" class="status-error">
-                <XCircleIcon class="status-icon" />
-                <span>{{ file.error || '上传失败' }}</span>
-              </div>
-              <div v-else class="status-pending">
-                <ClockIcon class="status-icon" />
-                <span>等待上传</span>
-              </div>
-            </div>
+      <!-- URL转存区域 -->
+      <t-card class="transfer-card">
+        <template #header>
+          <h3 class="card-title">网络图片转存</h3>
+        </template>
 
-            <!-- 操作按钮 -->
-            <div class="file-actions">
+        <div class="transfer-content">
+          <t-textarea
+            v-model="urlList"
+            placeholder="请输入图片URL，每行一个链接（最多20个）&#10;例如：&#10;https://example.com/image1.jpg&#10;https://example.com/image2.png"
+            :rows="4"
+            class="url-input"
+          />
+          
+          <div class="transfer-actions">
+            <span class="transfer-desc">支持批量转存，自动绕过防盗链</span>
+            <div class="action-buttons">
               <t-button 
-                v-if="file.status === 'success' && file.url"
-                size="small"
                 variant="outline"
-                @click="copyToClipboard(file.url!)"
+                :loading="validating"
+                :disabled="!urlList.trim()"
+                @click="validateUrls"
               >
-                <template #icon><CopyIcon /></template>
-                复制链接
+                {{ validating ? '验证中...' : '验证URL' }}
               </t-button>
               <t-button 
-                v-if="file.status === 'error'"
-                size="small"
                 theme="primary"
-                @click="retryUpload(file.id)"
+                :loading="isTransferring"
+                :disabled="!urlList.trim()"
+                @click="handleTransfer"
               >
-                <template #icon><RefreshCwIcon /></template>
-                重试
+                {{ isTransferring ? '转存中...' : '开始转存' }}
               </t-button>
               <t-button 
-                size="small"
                 variant="outline"
-                @click="removeFile(file.id)"
+                @click="clearTransferData"
+                :disabled="!urlList.trim() && validationResults.length === 0 && transferProgress.length === 0"
               >
-                <template #icon><XIcon /></template>
+                清空
               </t-button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 上传统计 -->
-      <div v-if="uploadFiles.length > 0" class="upload-stats">
-        <div class="stats-item">
-          <span class="stats-label">总计:</span>
-          <span class="stats-value">{{ uploadStats.total }} 个文件</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">成功:</span>
-          <span class="stats-value success">{{ uploadStats.success }}</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">失败:</span>
-          <span class="stats-value error">{{ uploadStats.error }}</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">等待:</span>
-          <span class="stats-value pending">{{ uploadStats.pending }}</span>
-        </div>
-      </div>
-    </t-card>
-
-    <!-- URL转存区域 -->
-    <t-card class="transfer-card">
-      <template #header>
-        <h3 class="card-title">网络图片转存</h3>
-      </template>
-
-      <div class="transfer-content">
-        <t-textarea
-          v-model="urlList"
-          placeholder="请输入图片URL，每行一个链接（最多20个）&#10;例如：&#10;https://example.com/image1.jpg&#10;https://example.com/image2.png"
-          :rows="4"
-          class="url-input"
-        />
-        
-        <div class="transfer-actions">
-          <span class="transfer-desc">支持批量转存，自动绕过防盗链</span>
-          <div class="action-buttons">
-            <t-button 
-              variant="outline"
-              :loading="validating"
-              :disabled="!urlList.trim()"
-              @click="validateUrls"
-            >
-              <template #icon><CheckIcon /></template>
-              {{ validating ? '验证中...' : '验证URL' }}
-            </t-button>
-            <t-button 
-              theme="primary"
-              :loading="isTransferring"
-              :disabled="!urlList.trim()"
-              @click="handleTransfer"
-            >
-              <template #icon><DownloadIcon /></template>
-              {{ isTransferring ? '转存中...' : '开始转存' }}
-            </t-button>
-            <t-button 
-              variant="outline"
-              @click="clearTransferData"
-              :disabled="!urlList.trim() && validationResults.length === 0 && transferProgress.length === 0"
-            >
-              <template #icon><TrashIcon /></template>
-              清空
-            </t-button>
-          </div>
-        </div>
-
-        <!-- URL验证结果 -->
-        <div v-if="validationResults.length > 0" class="validation-results">
-          <h4 class="results-title">URL验证结果</h4>
-          <div class="results-list">
-            <div 
-              v-for="(result, index) in validationResults" 
-              :key="index"
-              class="result-item"
-              :class="{ 'valid': result.valid, 'invalid': !result.valid }"
-            >
-              <div class="result-status">
-                <CheckCircleIcon v-if="result.valid" class="status-icon success" />
-                <XCircleIcon v-else class="status-icon error" />
+          <!-- URL验证结果 -->
+          <div v-if="validationResults.length > 0" class="validation-results">
+            <h4 class="results-title">URL验证结果</h4>
+            <div class="results-list">
+              <div 
+                v-for="(result, index) in validationResults" 
+                :key="index"
+                class="result-item"
+                :class="{ 'valid': result.valid, 'invalid': !result.valid }"
+              >
+                <div class="result-status">
+                  <CheckCircleIcon v-if="result.valid" class="status-icon success" />
+                  <XCircleIcon v-else class="status-icon error" />
+                </div>
+                <div class="result-details">
+                  <p class="result-url">{{ result.url }}</p>
+                  <div class="result-meta">
+                    <span v-if="result.contentType" class="meta-item">{{ result.contentType }}</span>
+                    <span v-if="result.contentLength" class="meta-item">{{ formatFileSize(result.contentLength) }}</span>
+                    <span v-if="result.error" class="meta-item error">{{ result.error }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="result-details">
-                <p class="result-url">{{ result.url }}</p>
-                <div class="result-meta">
-                  <span v-if="result.contentType" class="meta-item">{{ result.contentType }}</span>
-                  <span v-if="result.contentLength" class="meta-item">{{ formatFileSize(result.contentLength) }}</span>
-                  <span v-if="result.error" class="meta-item error">{{ result.error }}</span>
+            </div>
+          </div>
+
+          <!-- 转存进度 -->
+          <div v-if="transferProgress.length > 0" class="transfer-progress">
+            <h4 class="progress-title">转存进度</h4>
+            <div class="progress-list">
+              <div 
+                v-for="(progress, index) in transferProgress" 
+                :key="index"
+                class="progress-item"
+              >
+                <div class="progress-status">
+                  <div v-if="progress.status === 'processing'" class="loading-spinner"></div>
+                  <CheckCircleIcon v-else-if="progress.status === 'success'" class="status-icon success" />
+                  <XCircleIcon v-else-if="progress.status === 'error'" class="status-icon error" />
+                </div>
+                <div class="progress-details">
+                  <p class="progress-url">{{ progress.originalUrl }}</p>
+                  <p class="progress-message" :class="progress.status">{{ progress.message }}</p>
+                  <!-- 转存成功时显示新链接 -->
+                  <p v-if="progress.status === 'success' && progress.newUrl" class="progress-new-url">
+                    {{ progress.newUrl }}
+                  </p>
+                </div>
+                <!-- 转存成功时显示复制按钮 -->
+                <div v-if="progress.status === 'success' && progress.newUrl" class="progress-actions">
+                  <t-button size="small" variant="outline" @click="copyToClipboard(progress.newUrl)">
+                    复制链接
+                  </t-button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </t-card>
+    </div>
 
-        <!-- 转存进度 -->
-        <div v-if="transferProgress.length > 0" class="transfer-progress">
-          <h4 class="progress-title">转存进度</h4>
-          <div class="progress-list">
-            <div 
-              v-for="(progress, index) in transferProgress" 
-              :key="index"
-              class="progress-item"
+    <!-- 上传队列抽屉 -->
+    <t-drawer
+      v-model:visible="uploadDrawerVisible"
+      title="上传管理"
+      placement="right"
+      :size="drawerSize"
+      :show-overlay="true"
+      :close-on-overlay-click="true"
+      :footer="true"
+    >
+      <!-- 存储选择 -->
+      <div class="drawer-section">
+        <h4 class="section-title">存储配置</h4>
+        <div class="storage-selector">
+          <t-select 
+            v-model="selectedStorageId" 
+            :options="storageOptions"
+            placeholder="选择存储方式"
+            class="storage-select"
+          />
+          <span v-if="storageOptions.length === 1" class="storage-hint">
+            当前只有一个存储配置
+          </span>
+        </div>
+      </div>
+
+      <!-- 上传队列 -->
+      <div v-if="uploadFiles.length > 0" class="drawer-section">
+        <div class="section-header">
+          <h4 class="section-title">上传队列 ({{ uploadFiles.length }})</h4>
+          <div class="section-actions">
+            <t-button 
+              theme="primary" 
+              size="small"
+              :loading="isUploading"
+              :disabled="uploadFiles.filter(f => f.status === 'pending').length === 0 || !selectedStorageId"
+              @click="upload(selectedStorageId)"
             >
-              <div class="progress-status">
-                <div v-if="progress.status === 'processing'" class="loading-spinner"></div>
-                <CheckCircleIcon v-else-if="progress.status === 'success'" class="status-icon success" />
-                <XCircleIcon v-else-if="progress.status === 'error'" class="status-icon error" />
-              </div>
-              <div class="progress-details">
-                <p class="progress-url">{{ progress.url }}</p>
-                <p class="progress-message" :class="progress.status">{{ progress.message }}</p>
-              </div>
-            </div>
+              {{ isUploading ? '上传中...' : '开始上传' }}
+            </t-button>
+            <t-button variant="outline" size="small" @click="clearFiles">
+              清空列表
+            </t-button>
           </div>
         </div>
 
-        <!-- 转存结果 -->
-        <div v-if="transferResults.length > 0" class="transfer-results">
-          <h4 class="results-title">转存结果</h4>
-          <div class="results-list">
-            <div 
-              v-for="(result, index) in transferResults" 
-              :key="index"
-              class="result-item"
-            >
-              <div class="result-details">
-                <p class="result-url">{{ result.originalUrl }}</p>
-                <p class="result-message" :class="{ 'success': result.success, 'error': !result.success }">
-                  {{ result.message }}
-                </p>
+        <!-- 文件列表 -->
+        <div class="drawer-file-list">
+          <div 
+            v-for="file in uploadFiles" 
+            :key="file.id"
+            class="drawer-file-item"
+          >
+            <div class="file-info">
+              <div class="file-icon">
+                <ImageIcon />
               </div>
-              <div v-if="result.success && result.newUrl" class="result-actions">
-                <t-button size="small" variant="outline" @click="copyToClipboard(result.newUrl!)">
-                  <template #icon><CopyIcon /></template>
+              <div class="file-details">
+                <p class="file-name">{{ file.file.name }}</p>
+                <p class="file-size">{{ formatFileSize(file.file.size) }}</p>
+              </div>
+            </div>
+
+            <!-- 状态和进度 -->
+            <div class="file-status">
+              <div class="progress-area">
+                <div v-if="file.status === 'uploading'" class="progress-bar">
+                  <t-progress 
+                    :percentage="file.progress" 
+                    size="small"
+                    :show-info="false"
+                  />
+                </div>
+                <div v-else-if="file.status === 'success'" class="status-success">
+                  <CheckCircleIcon class="status-icon" />
+                  <span>上传成功</span>
+                </div>
+                <div v-else-if="file.status === 'error'" class="status-error">
+                  <XCircleIcon class="status-icon" />
+                  <span>{{ file.error || '上传失败' }}</span>
+                </div>
+                <div v-else class="status-pending">
+                  <ClockIcon class="status-icon" />
+                  <span>等待上传</span>
+                </div>
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="file-actions">
+                <t-button 
+                  v-if="file.status === 'success' && file.url"
+                  size="small"
+                  variant="outline"
+                  @click="copyToClipboard(file.url!)"
+                >
                   复制链接
+                </t-button>
+                <t-button 
+                  v-if="file.status === 'error'"
+                  size="small"
+                  theme="primary"
+                  @click="retryUpload(file.id)"
+                >
+                  重试
+                </t-button>
+                <t-button 
+                  size="small"
+                  variant="outline"
+                  @click="removeFile(file.id)"
+                >
+                  移除
                 </t-button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- 上传统计 -->
+        <div v-if="uploadFiles.length > 0" class="upload-stats">
+          <div class="stats-item">
+            <span class="stats-label">总计:</span>
+            <span class="stats-value">{{ uploadStats.total }} 个文件</span>
+          </div>
+          <div class="stats-item">
+            <span class="stats-label">成功:</span>
+            <span class="stats-value success">{{ uploadStats.success }}</span>
+          </div>
+          <div class="stats-item">
+            <span class="stats-label">失败:</span>
+            <span class="stats-value error">{{ uploadStats.error }}</span>
+          </div>
+          <div class="stats-item">
+            <span class="stats-label">等待:</span>
+            <span class="stats-value pending">{{ uploadStats.pending }}</span>
+          </div>
+        </div>
       </div>
-    </t-card>
+
+      <!-- 空状态 -->
+      <div v-else class="drawer-empty">
+        <div class="empty-content">
+          <ImageIcon class="empty-icon" />
+          <p class="empty-text">暂无上传文件</p>
+          <p class="empty-desc">选择文件或拖拽到上传区域开始上传</p>
+        </div>
+      </div>
+      
+      <!-- 抽屉底部按钮 -->
+      <template #footer>
+        <div class="drawer-footer">
+          <t-button theme="primary" size="large" block @click="handleDrawerComplete">
+            完成
+          </t-button>
+        </div>
+      </template>
+    </t-drawer>
   </div>
 </template>
 
@@ -337,6 +347,28 @@ const transferProgress = ref<any[]>([])
 // 存储选择相关
 const selectedStorageId = ref('')
 const storageOptions = ref<Array<{label: string, value: string}>>([])
+
+// 抽屉相关
+const uploadDrawerVisible = ref(false)
+const drawerSize = computed(() => {
+  // 响应式抽屉宽度
+  if (typeof window !== 'undefined') {
+    return window.innerWidth <= 768 ? '100%' : '480px'
+  }
+  return '480px'
+})
+
+// 显示上传抽屉
+const showUploadDrawer = () => {
+  uploadDrawerVisible.value = true
+}
+
+// 处理抽屉完成
+const handleDrawerComplete = () => {
+  uploadDrawerVisible.value = false
+  clearFiles()
+  MessagePlugin.success('上传队列已清空')
+}
 
 // 加载存储选项
 const loadStorageOptions = async () => {
@@ -397,6 +429,8 @@ const handleDrop = (e: DragEvent) => {
   if (imageFiles.length > 0) {
     addFiles(imageFiles)
     MessagePlugin.success(`已添加 ${imageFiles.length} 个文件到上传队列`)
+    // 拖拽文件后自动打开抽屉
+    uploadDrawerVisible.value = true
   } else {
     MessagePlugin.error('请拖拽图片文件')
   }
@@ -410,6 +444,8 @@ const handleFileSelect = (e: Event) => {
   if (files.length > 0) {
     addFiles(files)
     MessagePlugin.success(`已添加 ${files.length} 个文件到上传队列`)
+    // 选择文件后自动打开抽屉
+    uploadDrawerVisible.value = true
   }
   
   // 清空input值，允许重复选择同一文件
@@ -475,7 +511,7 @@ const handleTransfer = async () => {
   isTransferring.value = true
   transferResults.value = []
   transferProgress.value = urls.map(url => ({
-    url,
+    originalUrl: url,
     status: 'processing',
     message: '准备转存...'
   }))
@@ -485,7 +521,8 @@ const handleTransfer = async () => {
     if (response.success && response.data) {
       transferResults.value = response.data
       transferProgress.value = response.data.map(result => ({
-        url: result.originalUrl,
+        originalUrl: result.originalUrl,
+        newUrl: result.newUrl,
         status: result.success ? 'success' : 'error',
         message: result.message
       }))
@@ -494,7 +531,7 @@ const handleTransfer = async () => {
     } else {
       MessagePlugin.error('转存失败: ' + response.message)
       transferProgress.value = urls.map(url => ({
-        url,
+        originalUrl: url,
         status: 'error',
         message: response.message
       }))
@@ -503,7 +540,7 @@ const handleTransfer = async () => {
 
     MessagePlugin.error('转存失败: ' + error.message)
     transferProgress.value = urls.map(url => ({
-      url,
+      originalUrl: url,
       status: 'error',
       message: error.message
     }))
@@ -545,6 +582,7 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .page-header {
+  margin-top: 30px;
   margin-bottom: 24px;
 }
 
@@ -865,6 +903,10 @@ const formatFileSize = (bytes: number): string => {
   border: 1px solid var(--td-border-level-1-color);
 }
 
+.progress-item:has(.progress-actions) {
+  align-items: flex-start;
+}
+
 .result-item.valid {
   background-color: var(--td-success-color-light);
   border-color: var(--td-success-color);
@@ -934,6 +976,20 @@ const formatFileSize = (bytes: number): string => {
   color: var(--td-brand-color);
 }
 
+.progress-new-url {
+  font-size: 12px;
+  color: var(--td-success-color);
+  margin: 4px 0 0 0;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.progress-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .result-actions {
   display: flex;
   gap: 8px;
@@ -953,30 +1009,203 @@ const formatFileSize = (bytes: number): string => {
   100% { transform: rotate(360deg); }
 }
 
+/* 抽屉样式 */
+.drawer-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+  margin: 0 0 12px 0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.storage-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.storage-select {
+  width: 100%;
+}
+
+.storage-hint {
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
+}
+
+.drawer-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.drawer-file-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 8px;
+  background-color: var(--td-bg-color-container);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--td-bg-color-component);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--td-text-color-placeholder);
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
+  margin: 0;
+}
+
+.file-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-area {
+  flex: 1;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.upload-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--td-bg-color-secondarycontainer);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.stats-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-label {
+  font-size: 12px;
+  color: var(--td-text-color-secondary);
+}
+
+.stats-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+}
+
+.stats-value.success {
+  color: var(--td-success-color);
+}
+
+.stats-value.error {
+  color: var(--td-error-color);
+}
+
+.stats-value.pending {
+  color: var(--td-warning-color);
+}
+
+.drawer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+}
+
+.empty-content {
+  text-align: center;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--td-text-color-placeholder);
+  margin: 0 auto 16px;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: var(--td-text-color-secondary);
+  margin: 0 0 8px 0;
+}
+
+.empty-desc {
+  font-size: 14px;
+  color: var(--td-text-color-placeholder);
+  margin: 0;
+}
+
+/* 抽屉底部按钮样式 */
+.drawer-footer {
+  padding: 16px;
+  border-top: 1px solid var(--td-border-level-1-color);
+  background-color: var(--td-bg-color-container);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .upload-area {
     padding: 32px 16px;
   }
   
-  .list-header {
+  .upload-actions {
     flex-direction: column;
     gap: 12px;
-    align-items: stretch;
-  }
-  
-  .file-item {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .file-status {
-    justify-content: space-between;
-  }
-  
-  .progress-area {
-    width: 100%;
   }
   
   .transfer-actions {
@@ -985,10 +1214,27 @@ const formatFileSize = (bytes: number): string => {
     align-items: stretch;
   }
   
-  .upload-stats {
+  .action-buttons {
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .drawer-file-item {
+    padding: 12px;
+  }
+  
+  .file-status {
+    flex-direction: column;
     align-items: stretch;
+    gap: 8px;
+  }
+  
+  .file-actions {
+    justify-content: center;
+  }
+  
+  .upload-stats {
+    grid-template-columns: 1fr;
   }
 }
 </style>
