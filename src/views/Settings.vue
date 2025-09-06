@@ -996,12 +996,13 @@ const loadStorageList = async () => {
           id: storage.id.toString(),
           name: storage.name,
           type: storage.type,
-          isDefault: storage.is_default,
+          isDefault: Boolean(storage.is_default), // 确保转换为布尔值
           status: 'connected', // TODO: 实现真实的连接状态检测
           customDomain: storage.config.customDomain || '',
           ...storage.config
         }
-
+        
+        console.log(`存储 ${storage.name}: is_default=${storage.is_default}, isDefault=${mapped.isDefault}`)
         return mapped
       })
 
