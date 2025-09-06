@@ -566,6 +566,69 @@ export const apiService = {
   }> {
     const response = await api.get('/config/system')
     return response.data
+  },
+
+  // ============ 图片硬删除管理相关 ============
+  
+  // 获取已软删除的图片列表（仅管理员）
+  async getDeletedImages(params: {
+    page?: number
+    limit?: number
+    search?: string
+  } = {}): Promise<ImageListResponse> {
+    const response = await api.get('/images/deleted', { params })
+    return response.data
+  },
+
+  // 恢复软删除的图片（仅管理员）
+  async restoreImage(id: number): Promise<{
+    success: boolean
+    message: string
+    data?: any
+  }> {
+    const response = await api.post(`/images/${id}/restore`)
+    return response.data
+  },
+
+  // 硬删除图片（永久删除，仅管理员）
+  async permanentDeleteImage(id: number): Promise<{
+    success: boolean
+    message: string
+    data?: any
+    storageDeleted?: boolean
+  }> {
+    const response = await api.delete(`/images/${id}/permanent`)
+    return response.data
+  },
+
+  // 批量硬删除图片（永久删除，仅管理员）
+  async batchPermanentDeleteImages(ids: number[]): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      deleted: number[]
+      errors: string[]
+    }
+  }> {
+    const response = await api.delete('/images/permanent', {
+      data: { ids }
+    })
+    return response.data
+  },
+
+  // 清理指定天数前的软删除记录（仅管理员）
+  async cleanupDeletedImages(daysOld: number = 30): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      cleanedRecords: number
+      storageFilesDeleted: number
+      localFilesDeleted: number
+      daysOld: number
+    }
+  }> {
+    const response = await api.post('/images/cleanup', { daysOld })
+    return response.data
   }
 }
 
