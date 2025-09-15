@@ -67,6 +67,7 @@ const routes: RouteRecordRaw[] = [
         meta: { 
           title: '存储统计',
           requiresAuth: true,
+          requiresAdmin: true,
           icon: 'chart'
         }
       },

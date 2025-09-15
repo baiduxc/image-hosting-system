@@ -373,23 +373,29 @@ const handleDrawerComplete = () => {
 // 加载存储选项
 const loadStorageOptions = async () => {
   try {
-    const response = await apiService.getAllStorages()
+    const response = await apiService.getAvailableStorages()
     if (response.success && response.data) {
       storageOptions.value = response.data.map(storage => ({
-        label: storage.name,
+        label: `${storage.name}${storage.isDefault ? ' (默认)' : ''}`,
         value: storage.id.toString()
       }))
       
-      // 从localStorage获取用户上次选择的存储，如果没有则选择第一个
-      const lastSelectedStorage = localStorage.getItem('selectedStorageId')
-      if (lastSelectedStorage && storageOptions.value.find(opt => opt.value === lastSelectedStorage)) {
-        selectedStorageId.value = lastSelectedStorage
-      } else if (storageOptions.value.length > 0) {
-        selectedStorageId.value = storageOptions.value[0].value
+      // 优先选择默认存储，如果没有则从localStorage获取用户上次选择的存储
+      const defaultStorage = response.data.find(storage => storage.isDefault)
+      if (defaultStorage) {
+        selectedStorageId.value = defaultStorage.id.toString()
+      } else {
+        const lastSelectedStorage = localStorage.getItem('selectedStorageId')
+        if (lastSelectedStorage && storageOptions.value.find(opt => opt.value === lastSelectedStorage)) {
+          selectedStorageId.value = lastSelectedStorage
+        } else if (storageOptions.value.length > 0) {
+          selectedStorageId.value = storageOptions.value[0].value
+        }
       }
     }
   } catch (error) {
-
+    console.error('加载存储配置失败:', error)
+    MessagePlugin.error('加载存储配置失败，请联系管理员')
   }
 }
 

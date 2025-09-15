@@ -548,6 +548,16 @@ export const apiService = {
     return response.data
   },
 
+  // 获取可用存储配置列表（所有认证用户）
+  async getAvailableStorages(): Promise<{
+    success: boolean
+    data?: any[]
+    message?: string
+  }> {
+    const response = await api.get('/storage/available')
+    return response.data
+  },
+
   // 上传文件到对象存储
   async uploadToStorage(files: any[], storageId: string): Promise<{
     success: boolean

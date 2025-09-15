@@ -104,12 +104,12 @@ const globalLoading = ref(false)
 const navItems = computed(() => {
   const items = [
     { name: 'Upload', path: '/upload', title: '上传', icon: 'upload' },
-    { name: 'Manage', path: '/manage', title: '管理', icon: 'folder' },
-    { name: 'Stats', path: '/stats', title: '统计', icon: 'chart' }
+    { name: 'Manage', path: '/manage', title: '管理', icon: 'folder' }
   ]
   
-  // 只有管理员才能看到设置页面
+  // 只有管理员才能看到统计和设置页面
   if (isAdmin.value) {
+    items.push({ name: 'Stats', path: '/stats', title: '统计', icon: 'chart' })
     items.push({ name: 'Settings', path: '/settings', title: '设置', icon: 'settings' })
   }
   

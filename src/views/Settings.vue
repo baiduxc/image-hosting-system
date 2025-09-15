@@ -26,17 +26,17 @@
               v-for="(storage, index) in storageList" 
               :key="storage.id"
               class="storage-card"
-              :class="{ 'active': storage.isDefault }"
+              :class="{ 'active': storage.isDefault === true }"
             >
               <div class="storage-header">
                 <div class="storage-info">
                   <h4 class="storage-name">{{ storage.name }}</h4>
                   <span class="storage-type">{{ getStorageTypeLabel(storage.type) }}</span>
-                  <t-tag v-if="storage.isDefault" theme="success" size="small">默认</t-tag>
+                  <t-tag v-if="storage.isDefault === true" theme="success" size="small">默认</t-tag>
                 </div>
                 <div class="storage-actions">
                   <t-button 
-                    v-if="!storage.isDefault"
+                    v-if="storage.isDefault !== true"
                     theme="primary" 
                     variant="outline" 
                     size="small"
@@ -992,17 +992,20 @@ const loadStorageList = async () => {
     if (response.success && response.data) {
 
       storageList.value = response.data.map(storage => {
+        // 强制转换为布尔值，处理各种可能的数据类型
+        const isDefaultValue = storage.is_default === true || storage.is_default === 'true' || storage.is_default === 1
+        
         const mapped = {
           id: storage.id.toString(),
           name: storage.name,
           type: storage.type,
-          isDefault: Boolean(storage.is_default), // 确保转换为布尔值
+          isDefault: isDefaultValue,
           status: 'connected', // TODO: 实现真实的连接状态检测
           customDomain: storage.config.customDomain || '',
           ...storage.config
         }
         
-        console.log(`存储 ${storage.name}: is_default=${storage.is_default}, isDefault=${mapped.isDefault}`)
+        console.log(`存储 ${storage.name}: 原始值=${storage.is_default} (类型: ${typeof storage.is_default}), 转换后=${mapped.isDefault}`)
         return mapped
       })
 
