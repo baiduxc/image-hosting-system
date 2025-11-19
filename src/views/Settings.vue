@@ -372,6 +372,154 @@
           </t-form>
         </div>
       </t-tab-panel>
+
+      <!-- 数据库管理 -->
+      <t-tab-panel value="database" label="数据库管理">
+        <div class="settings-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <DatabaseIcon class="section-icon" />
+              数据库管理
+            </h3>
+            <p class="section-desc">管理数据库备份和迁移</p>
+          </div>
+
+          <!-- 数据库信息 -->
+          <div class="info-card">
+            <h4 class="info-card-title">数据库信息</h4>
+            <div class="info-row">
+              <span class="info-label">数据库类型：</span>
+              <t-tag :theme="dbInfo.type === 'sqlite' ? 'success' : 'primary'">
+                {{ dbInfo.type === 'sqlite' ? 'SQLite' : 'PostgreSQL' }}
+              </t-tag>
+            </div>
+            <div v-if="dbInfo.path" class="info-row">
+              <span class="info-label">数据库路径：</span>
+              <span class="info-value">{{ dbInfo.path }}</span>
+            </div>
+            <div v-if="dbInfo.size" class="info-row">
+              <span class="info-label">数据库大小：</span>
+              <span class="info-value">{{ formatFileSize(dbInfo.size) }}</span>
+            </div>
+          </div>
+
+          <!-- 数据库备份（仅SQLite） -->
+          <div v-if="dbInfo.type === 'sqlite'" class="form-section">
+            <h4 class="form-section-title">数据库备份</h4>
+            <p class="section-desc">创建数据库备份以防止数据丢失</p>
+            
+            <div class="form-actions">
+              <t-button theme="primary" @click="createBackup" :loading="isBackingUp">
+                <template #icon><DownloadCloudIcon /></template>
+                创建备份
+              </t-button>
+              <t-button variant="outline" @click="loadBackups">
+                <template #icon><RefreshCwIcon /></template>
+                刷新列表
+              </t-button>
+            </div>
+
+            <!-- 备份列表 -->
+            <div v-if="backups.length > 0" class="backup-list">
+              <h5 class="backup-list-title">备份文件列表</h5>
+              <div v-for="backup in backups" :key="backup.fileName" class="backup-item">
+                <div class="backup-info">
+                  <div class="backup-name">{{ backup.fileName }}</div>
+                  <div class="backup-meta">
+                    <span>{{ formatFileSize(backup.fileSize) }}</span>
+                    <span>{{ formatDate(backup.createdAt) }}</span>
+                  </div>
+                </div>
+                <div class="backup-actions">
+                  <t-button 
+                    size="small" 
+                    variant="outline" 
+                    @click="downloadBackupFile(backup.fileName)"
+                  >
+                    下载
+                  </t-button>
+                  <t-button 
+                    size="small" 
+                    theme="danger" 
+                    variant="text"
+                    @click="deleteBackupFile(backup.fileName)"
+                  >
+                    删除
+                  </t-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PostgreSQL 转 SQLite -->
+          <div class="form-section">
+            <h4 class="form-section-title">数据库迁移</h4>
+            <p class="section-desc">将 PostgreSQL 数据库转换为 SQLite 格式</p>
+
+            <t-form layout="vertical" :colon="false" class="migrate-form">
+              <t-form-item label="PostgreSQL 连接字符串" name="databaseUrl">
+                <t-textarea 
+                  v-model="migrationConfig.databaseUrl" 
+                  placeholder="postgresql://username:password@host:port/database"
+                  :rows="3"
+                />
+                <template #help>
+                  例如：postgresql://user:pass@localhost:5432/imagedb
+                </template>
+              </t-form-item>
+
+              <div class="form-actions">
+                <t-button 
+                  theme="warning" 
+                  @click="startMigration" 
+                  :loading="isMigrating"
+                  :disabled="!migrationConfig.databaseUrl"
+                >
+                  <template #icon><DatabaseIcon /></template>
+                  开始转换
+                </t-button>
+              </div>
+
+              <!-- 转换结果 -->
+              <div v-if="migrationResult" class="migration-result">
+                <t-alert :theme="migrationResult.success ? 'success' : 'error'" :message="migrationResult.message">
+                  <template v-if="migrationResult.success && migrationResult.data" #default>
+                    <div class="migration-details">
+                      <p><strong>转换完成！</strong></p>
+                      <p>文件名：{{ migrationResult.data.fileName }}</p>
+                      <p>文件大小：{{ formatFileSize(migrationResult.data.fileSize) }}</p>
+                      <p>已复制记录：</p>
+                      <ul>
+                        <li>用户：{{ migrationResult.data.recordsCopied.users }} 条</li>
+                        <li>图片：{{ migrationResult.data.recordsCopied.images }} 条</li>
+                        <li>存储配置：{{ migrationResult.data.recordsCopied.storages }} 条</li>
+                        <li>统计数据：{{ migrationResult.data.recordsCopied.stats }} 条</li>
+                        <li>系统配置：{{ migrationResult.data.recordsCopied.configs }} 条</li>
+                      </ul>
+                      <t-button 
+                        theme="primary" 
+                        @click="downloadMigrationFile(migrationResult.data.fileName)"
+                      >
+                        下载 SQLite 数据库文件
+                      </t-button>
+                    </div>
+                  </template>
+                </t-alert>
+              </div>
+            </t-form>
+          </div>
+
+          <!-- 警告提示 -->
+          <t-alert theme="warning" title="重要提示">
+            <ul>
+              <li>数据库备份和迁移操作可能需要较长时间，请耐心等待</li>
+              <li>建议在低峰期进行数据库操作</li>
+              <li>迁移后请妥善保管数据库文件</li>
+              <li>使用 SQLite 模式时，定期备份数据库文件</li>
+            </ul>
+          </t-alert>
+        </div>
+      </t-tab-panel>
     </t-tabs>
 
     <!-- 添加/编辑存储对话框 -->
@@ -681,7 +829,10 @@ import {
   MailIcon,
   ShieldIcon,
   PlusIcon,
-  TestTubeIcon
+  TestTubeIcon,
+  DatabaseIcon,
+  DownloadCloudIcon,
+  RefreshCwIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
@@ -756,6 +907,23 @@ const securityConfig = reactive({
   jwtExpiration: 24,
   maxLoginAttempts: 5
 })
+
+// 数据库管理相关
+const dbInfo = reactive({
+  type: 'sqlite',
+  path: null as string | null,
+  size: null as number | null
+})
+
+const backups = ref<any[]>([])
+const isBackingUp = ref(false)
+const isMigrating = ref(false)
+
+const migrationConfig = reactive({
+  databaseUrl: ''
+})
+
+const migrationResult = ref<any>(null)
 
 // 表单验证规则
 const storageRules = {
@@ -1038,10 +1206,149 @@ const loadConfigs = async () => {
   }
 }
 
+// 数据库管理方法
+const loadDatabaseInfo = async () => {
+  try {
+    const response = await apiService.getDatabaseInfo()
+    if (response.success && response.data) {
+      Object.assign(dbInfo, response.data)
+    }
+  } catch (error) {
+    console.error('加载数据库信息失败:', error)
+  }
+}
+
+const loadBackups = async () => {
+  try {
+    const response = await apiService.getDatabaseBackups()
+    if (response.success && response.data) {
+      backups.value = response.data
+    }
+  } catch (error) {
+    MessagePlugin.error('加载备份列表失败')
+  }
+}
+
+const createBackup = async () => {
+  isBackingUp.value = true
+  try {
+    const response = await apiService.backupDatabase()
+    if (response.success) {
+      MessagePlugin.success('数据库备份成功')
+      await loadBackups()
+      
+      // 自动下载
+      if (response.data?.fileName) {
+        await downloadBackupFile(response.data.fileName)
+      }
+    } else {
+      MessagePlugin.error(response.message || '备份失败')
+    }
+  } catch (error: any) {
+    MessagePlugin.error('备份失败: ' + error.message)
+  } finally {
+    isBackingUp.value = false
+  }
+}
+
+const downloadBackupFile = async (fileName: string) => {
+  try {
+    const blob = await apiService.downloadBackup(fileName)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    MessagePlugin.success('下载成功')
+  } catch (error: any) {
+    MessagePlugin.error('下载失败: ' + error.message)
+  }
+}
+
+const deleteBackupFile = async (fileName: string) => {
+  try {
+    const response = await apiService.deleteBackup(fileName)
+    if (response.success) {
+      MessagePlugin.success('删除成功')
+      await loadBackups()
+    }
+  } catch (error: any) {
+    MessagePlugin.error('删除失败: ' + error.message)
+  }
+}
+
+const startMigration = async () => {
+  if (!migrationConfig.databaseUrl) {
+    MessagePlugin.warning('请输入 PostgreSQL 连接字符串')
+    return
+  }
+
+  isMigrating.value = true
+  migrationResult.value = null
+
+  try {
+    const response = await apiService.migratePostgresToSqlite(migrationConfig.databaseUrl)
+    migrationResult.value = response
+    
+    if (response.success) {
+      MessagePlugin.success('数据库转换成功')
+    } else {
+      MessagePlugin.error(response.message || '转换失败')
+    }
+  } catch (error: any) {
+    migrationResult.value = {
+      success: false,
+      message: '转换失败: ' + error.message
+    }
+    MessagePlugin.error('转换失败: ' + error.message)
+  } finally {
+    isMigrating.value = false
+  }
+}
+
+const downloadMigrationFile = async (fileName: string) => {
+  try {
+    const blob = await apiService.downloadMigratedDatabase(fileName)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    MessagePlugin.success('下载成功')
+  } catch (error: any) {
+    MessagePlugin.error('下载失败: ' + error.message)
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+// 格式化日期
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN')
+}
+
 // 生命周期
 onMounted(() => {
   loadConfigs()
   loadStorageList()
+  loadDatabaseInfo()
+  loadBackups()
 })
 </script>
 
@@ -1244,6 +1551,121 @@ onMounted(() => {
   border-top: 1px solid var(--td-border-level-1-color);
 }
 
+/* 数据库管理样式 */
+.info-card {
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.info-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+  margin: 0 0 16px 0;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--td-text-color-secondary);
+}
+
+.info-value {
+  color: var(--td-text-color-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.backup-list {
+  margin-top: 24px;
+  border-top: 1px solid var(--td-border-level-1-color);
+  padding-top: 24px;
+}
+
+.backup-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+  margin: 0 0 16px 0;
+}
+
+.backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.backup-item:hover {
+  border-color: var(--td-brand-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.backup-info {
+  flex: 1;
+}
+
+.backup-name {
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+  margin-bottom: 4px;
+}
+
+.backup-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+}
+
+.backup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.migrate-form {
+  max-width: 800px;
+}
+
+.migration-result {
+  margin-top: 24px;
+}
+
+.migration-details {
+  margin-top: 16px;
+}
+
+.migration-details p {
+  margin: 8px 0;
+}
+
+.migration-details ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.migration-details li {
+  margin: 4px 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .settings-page {
@@ -1266,6 +1688,17 @@ onMounted(() => {
   }
   
   .storage-actions {
+    align-self: stretch;
+    justify-content: flex-end;
+  }
+
+  .backup-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .backup-actions {
     align-self: stretch;
     justify-content: flex-end;
   }

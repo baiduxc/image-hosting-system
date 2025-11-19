@@ -639,6 +639,98 @@ export const apiService = {
   }> {
     const response = await api.post('/images/cleanup', { daysOld })
     return response.data
+  },
+
+  // ============ 数据库管理相关 ============
+  
+  // 获取数据库信息
+  async getDatabaseInfo(): Promise<{
+    success: boolean
+    data?: {
+      type: string
+      path?: string
+      size?: number
+    }
+    message?: string
+  }> {
+    const response = await api.get('/database/info')
+    return response.data
+  },
+
+  // 备份数据库（仅SQLite）
+  async backupDatabase(): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      fileName: string
+      filePath: string
+      fileSize: number
+      timestamp: string
+    }
+  }> {
+    const response = await api.post('/database/backup')
+    return response.data
+  },
+
+  // 获取备份列表
+  async getDatabaseBackups(): Promise<{
+    success: boolean
+    data?: Array<{
+      fileName: string
+      fileSize: number
+      createdAt: string
+      modifiedAt: string
+    }>
+    message?: string
+  }> {
+    const response = await api.get('/database/backups')
+    return response.data
+  },
+
+  // 下载备份文件
+  async downloadBackup(fileName: string): Promise<Blob> {
+    const response = await api.get(`/database/backup/download/${fileName}`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  // 删除备份文件
+  async deleteBackup(fileName: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.delete(`/database/backup/${fileName}`)
+    return response.data
+  },
+
+  // PostgreSQL 转 SQLite
+  async migratePostgresToSqlite(databaseUrl: string): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      fileName: string
+      filePath: string
+      fileSize: number
+      recordsCopied: {
+        users: number
+        images: number
+        storages: number
+        stats: number
+        configs: number
+      }
+    }
+  }> {
+    const response = await api.post('/database/migrate/pg-to-sqlite', { databaseUrl })
+    return response.data
+  },
+
+  // 下载迁移后的数据库文件
+  async downloadMigratedDatabase(fileName: string): Promise<Blob> {
+    const response = await api.get(`/database/migrate/download/${fileName}`, {
+      responseType: 'blob'
+    })
+    return response.data
   }
 }
 
