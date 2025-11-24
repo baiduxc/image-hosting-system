@@ -94,6 +94,8 @@
             <p class="section-desc">配置系统的基本参数和上传限制</p>
           </div>
 
+
+
           <t-form 
             ref="systemForm" 
             :data="systemConfig" 
@@ -104,67 +106,69 @@
             <!-- 品牌设置 -->
             <div class="form-section">
               <h4 class="form-section-title">品牌设置</h4>
-              <div class="form-row">
-                <t-form-item label="网站名称" name="siteName" class="form-item">
-                  <t-input 
-                    v-model="systemConfig.siteName" 
-                    placeholder="图床管理系统"
-                  />
-                </t-form-item>
-                <t-form-item label="网站描述" name="siteDescription" class="form-item">
-                  <t-input 
-                    v-model="systemConfig.siteDescription" 
-                    placeholder="专业的图片存储和管理平台"
-                  />
-                </t-form-item>
-              </div>
-              <div class="form-row">
-                <t-form-item label="网站图标 (Favicon URL)" name="siteIcon" class="form-item">
-                  <t-input 
-                    v-model="systemConfig.siteIcon" 
-                    placeholder="https://example.com/favicon.ico"
-                  />
-                  <template #help>
-                    网站图标URL，显示在浏览器标签页
-                  </template>
-                </t-form-item>
-                <t-form-item label="网站Logo (URL)" name="siteLogo" class="form-item">
-                  <t-input 
-                    v-model="systemConfig.siteLogo" 
-                    placeholder="https://example.com/logo.png"
-                  />
-                  <template #help>
-                    网站Logo URL，显示在导航栏
-                  </template>
-                </t-form-item>
-              </div>
+              <t-form-item label="网站名称" name="siteName">
+                <t-input 
+                  v-model="systemConfig.siteName" 
+                  placeholder="图床管理系统"
+                />
+              </t-form-item>
+              
+              <t-form-item label="网站描述" name="siteDescription">
+                <t-input 
+                  v-model="systemConfig.siteDescription" 
+                  placeholder="专业的图片存储和管理平台"
+                />
+              </t-form-item>
+              
+              <t-form-item label="网站图标" name="siteIcon">
+                <t-input 
+                  v-model="systemConfig.siteIcon" 
+                  placeholder="https://example.com/favicon.ico"
+                />
+                <template #help>
+                  网站图标URL，显示在浏览器标签页
+                </template>
+              </t-form-item>
+              
+              <t-form-item label="网站Logo" name="siteLogo">
+                <t-input 
+                  v-model="systemConfig.siteLogo" 
+                  placeholder="https://example.com/logo.png"
+                />
+                <template #help>
+                  网站Logo URL，显示在导航栏
+                </template>
+              </t-form-item>
             </div>
 
             <!-- 上传设置 -->
             <div class="form-section">
               <h4 class="form-section-title">上传设置</h4>
-              <div class="form-row">
-                <t-form-item label="最大文件大小 (MB)" name="maxFileSize" class="form-item">
-                  <t-input-number 
-                    v-model="systemConfig.maxFileSize" 
-                    :min="1" 
-                    :max="100"
-                    placeholder="10"
-                  />
-                </t-form-item>
-                <t-form-item label="批量上传数量限制" name="maxBatchCount" class="form-item">
-                  <t-input-number 
-                    v-model="systemConfig.maxBatchCount" 
-                    :min="1" 
-                    :max="50"
-                    placeholder="20"
-                  />
-                </t-form-item>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <t-form-item label="允许的文件类型" name="allowedTypes" class="form-item-full">
+              <t-form-item label="最大文件大小" name="maxFileSize">
+                <t-input-number 
+                  v-model="systemConfig.maxFileSize" 
+                  :min="1" 
+                  :max="100"
+                  placeholder="10"
+                />
+                <template #help>
+                  单位：MB
+                </template>
+              </t-form-item>
+              
+              <t-form-item label="批量上传数量" name="maxBatchCount">
+                <t-input-number 
+                  v-model="systemConfig.maxBatchCount" 
+                  :min="1" 
+                  :max="50"
+                  placeholder="20"
+                />
+                <template #help>
+                  单次最多上传文件数
+                </template>
+              </t-form-item>
+              
+              <t-form-item label="允许的文件类型" name="allowedTypes">
                 <t-select 
                   v-model="systemConfig.allowedTypes" 
                   multiple
@@ -172,18 +176,15 @@
                   :options="fileTypeOptions"
                 />
               </t-form-item>
-            </div>
 
-            <div class="form-row">
-              <t-form-item label="自动压缩" name="autoCompress" class="form-item">
+              <t-form-item label="自动压缩图片" name="autoCompress">
                 <t-switch v-model="systemConfig.autoCompress" />
+                <template #help>
+                  上传时自动压缩图片
+                </template>
               </t-form-item>
-              <t-form-item 
-                v-if="systemConfig.autoCompress" 
-                label="压缩质量 (%)" 
-                name="compressQuality" 
-                class="form-item"
-              >
+              
+              <t-form-item v-if="systemConfig.autoCompress" label="压缩质量" name="compressQuality">
                 <t-slider 
                   v-model="systemConfig.compressQuality" 
                   :min="10" 
@@ -192,21 +193,17 @@
                   :marks="{ 50: '50%', 80: '80%' }"
                 />
               </t-form-item>
-              <div v-else class="form-item"></div>
             </div>
 
             <!-- 用户管理设置 -->
             <div class="form-section">
               <h4 class="form-section-title">用户管理</h4>
-              <div class="form-row">
-                <t-form-item label="允许用户注册" name="allowRegistration" class="form-item">
-                  <t-switch v-model="systemConfig.allowRegistration" />
-                  <template #help>
-                    关闭后，新用户将无法注册账户
-                  </template>
-                </t-form-item>
-                <div class="form-item"></div>
-              </div>
+              <t-form-item label="允许用户注册" name="allowRegistration">
+                <t-switch v-model="systemConfig.allowRegistration" />
+                <template #help>
+                  关闭后，新用户将无法注册账户
+                </template>
+              </t-form-item>
             </div>
 
             <div class="form-actions">
@@ -236,73 +233,69 @@
             :colon="false"
             class="settings-form"
           >
-            <div class="form-row">
-              <t-form-item label="SMTP服务器" name="smtpHost" class="form-item">
-                <t-input 
-                  v-model="emailConfig.smtpHost" 
-                  placeholder="smtp.example.com"
-                />
-              </t-form-item>
-              <t-form-item label="SMTP端口" name="smtpPort" class="form-item">
-                <t-input-number 
-                  v-model="emailConfig.smtpPort" 
-                  :min="1" 
-                  :max="65535"
-                  placeholder="587"
-                />
-              </t-form-item>
-            </div>
+            <t-form-item label="SMTP服务器" name="smtpHost">
+              <t-input 
+                v-model="emailConfig.smtpHost" 
+                placeholder="smtp.example.com"
+              />
+            </t-form-item>
+            
+            <t-form-item label="SMTP端口" name="smtpPort">
+              <t-input-number 
+                v-model="emailConfig.smtpPort" 
+                :min="1" 
+                :max="65535"
+                placeholder="587"
+              />
+            </t-form-item>
 
-            <div class="form-row">
-              <t-form-item label="SSL/TLS加密" name="smtpSecure" class="form-item">
-                <t-switch 
-                  v-model="emailConfig.smtpSecure"
-                />
-                <template #help>
-                  端口465通常使用SSL，端口587通常使用TLS
-                </template>
-              </t-form-item>
-              <t-form-item label="测试邮箱" name="testEmail" class="form-item">
-                <t-input 
-                  v-model="emailConfig.testEmail" 
-                  placeholder="test@example.com"
-                />
-                <template #help>
-                  用于接收测试邮件的邮箱地址
-                </template>
-              </t-form-item>
-            </div>
+            <t-form-item label="SSL/TLS加密" name="smtpSecure">
+              <t-switch 
+                v-model="emailConfig.smtpSecure"
+              />
+              <template #help>
+                端口465通常使用SSL，端口587通常使用TLS
+              </template>
+            </t-form-item>
+            
+            <t-form-item label="测试邮箱" name="testEmail">
+              <t-input 
+                v-model="emailConfig.testEmail" 
+                placeholder="test@example.com"
+              />
+              <template #help>
+                用于接收测试邮件的邮箱地址
+              </template>
+            </t-form-item>
 
-            <div class="form-row">
-              <t-form-item label="发件人邮箱" name="fromEmail" class="form-item">
-                <t-input 
-                  v-model="emailConfig.fromEmail" 
-                  placeholder="noreply@example.com"
-                />
-              </t-form-item>
-              <t-form-item label="发件人名称" name="fromName" class="form-item">
-                <t-input 
-                  v-model="emailConfig.fromName" 
-                  placeholder="图床系统"
-                />
-              </t-form-item>
-            </div>
+            <t-form-item label="发件人邮箱" name="fromEmail">
+              <t-input 
+                v-model="emailConfig.fromEmail" 
+                placeholder="noreply@example.com"
+              />
+            </t-form-item>
+            
+            <t-form-item label="发件人名称" name="fromName">
+              <t-input 
+                v-model="emailConfig.fromName" 
+                placeholder="图床系统"
+              />
+            </t-form-item>
 
-            <div class="form-row">
-              <t-form-item label="SMTP用户名" name="smtpUser" class="form-item">
-                <t-input 
-                  v-model="emailConfig.smtpUser" 
-                  placeholder="用户名或邮箱"
-                />
-              </t-form-item>
-              <t-form-item label="SMTP密码" name="smtpPass" class="form-item">
-                <t-input 
-                  v-model="emailConfig.smtpPass" 
-                  type="password"
-                  placeholder="密码或授权码"
-                />
-              </t-form-item>
-            </div>
+            <t-form-item label="SMTP用户名" name="smtpUser">
+              <t-input 
+                v-model="emailConfig.smtpUser" 
+                placeholder="用户名或邮箱"
+              />
+            </t-form-item>
+            
+            <t-form-item label="SMTP密码" name="smtpPass">
+              <t-input 
+                v-model="emailConfig.smtpPass" 
+                type="password"
+                placeholder="密码或授权码"
+              />
+            </t-form-item>
 
             <div class="form-actions">
               <t-button variant="outline" @click="testEmail" :loading="isTesting">
@@ -335,34 +328,36 @@
             :colon="false"
             class="settings-form"
           >
-            <div class="form-row">
-              <t-form-item label="需要邮箱验证" name="requireEmailVerification" class="form-item">
-                <t-switch v-model="securityConfig.requireEmailVerification" />
-                <template #help>
-                  开启后，新用户注册需要验证邮箱才能使用
-                </template>
-              </t-form-item>
-              <div class="form-item"></div>
-            </div>
+            <t-form-item label="邮箱验证" name="requireEmailVerification">
+              <t-switch v-model="securityConfig.requireEmailVerification" />
+              <template #help>
+                开启后，新用户注册需要验证邮箱才能使用
+              </template>
+            </t-form-item>
 
-            <div class="form-row">
-              <t-form-item label="JWT过期时间 (小时)" name="jwtExpiration" class="form-item">
-                <t-input-number 
-                  v-model="securityConfig.jwtExpiration" 
-                  :min="1" 
-                  :max="720"
-                  placeholder="24"
-                />
-              </t-form-item>
-              <t-form-item label="最大登录尝试次数" name="maxLoginAttempts" class="form-item">
-                <t-input-number 
-                  v-model="securityConfig.maxLoginAttempts" 
-                  :min="3" 
-                  :max="20"
-                  placeholder="5"
-                />
-              </t-form-item>
-            </div>
+            <t-form-item label="JWT过期时间" name="jwtExpiration">
+              <t-input-number 
+                v-model="securityConfig.jwtExpiration" 
+                :min="1" 
+                :max="720"
+                placeholder="24"
+              />
+              <template #help>
+                单位：小时
+              </template>
+            </t-form-item>
+            
+            <t-form-item label="最大登录尝试" name="maxLoginAttempts">
+              <t-input-number 
+                v-model="securityConfig.maxLoginAttempts" 
+                :min="3" 
+                :max="20"
+                placeholder="5"
+              />
+              <template #help>
+                超过次数将被锁定
+              </template>
+            </t-form-item>
 
             <div class="form-actions">
               <t-button theme="primary" @click="saveSecurityConfig" :loading="isSaving">
@@ -522,6 +517,8 @@
       </t-tab-panel>
     </t-tabs>
 
+    
+
     <!-- 添加/编辑存储对话框 -->
     <t-dialog 
       v-model:visible="storageDialogVisible" 
@@ -555,186 +552,201 @@
 
         <!-- 腾讯云COS配置 -->
         <template v-if="currentStorage.type === 'cos'">
-          <div class="form-row">
-            <t-form-item label="SecretId" name="secretId" class="form-item">
-              <t-input 
-                v-model="currentStorage.secretId" 
-                placeholder="腾讯云SecretId"
-              />
-            </t-form-item>
-            <t-form-item label="SecretKey" name="secretKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.secretKey" 
-                type="password"
-                placeholder="腾讯云SecretKey"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="存储桶名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="bucket-name"
-              />
-            </t-form-item>
-            <t-form-item label="Endpoint" name="endpoint" class="form-item">
-              <t-input 
-                v-model="currentStorage.endpoint" 
-                placeholder="https://cos.ap-beijing.myqcloud.com"
-              />
-              <template #help>
-                腾讯云COS的访问端点，例如：https://cos.ap-beijing.myqcloud.com
-              </template>
-            </t-form-item>
-          </div>
+          <t-form-item label="SecretId" name="secretId">
+            <t-input 
+              v-model="currentStorage.secretId" 
+              placeholder="腾讯云SecretId"
+            />
+          </t-form-item>
+          
+          <t-form-item label="SecretKey" name="secretKey">
+            <t-input 
+              v-model="currentStorage.secretKey" 
+              type="password"
+              placeholder="腾讯云SecretKey"
+            />
+          </t-form-item>
+          
+          <t-form-item label="存储桶名称" name="bucket">
+            <t-input 
+              v-model="currentStorage.bucket" 
+              placeholder="bucket-name"
+            />
+          </t-form-item>
+          
+          <t-form-item label="访问端点" name="endpoint">
+            <t-input 
+              v-model="currentStorage.endpoint" 
+              placeholder="https://cos.ap-beijing.myqcloud.com"
+            />
+            <template #help>
+              腾讯云COS的访问端点
+            </template>
+          </t-form-item>
         </template>
 
         <!-- 阿里云OSS配置 -->
         <template v-if="currentStorage.type === 'oss'">
-          <div class="form-row">
-            <t-form-item label="AccessKey ID" name="accessKeyId" class="form-item">
-              <t-input 
-                v-model="currentStorage.accessKeyId" 
-                placeholder="阿里云AccessKey ID"
-              />
-            </t-form-item>
-            <t-form-item label="AccessKey Secret" name="accessKeySecret" class="form-item">
-              <t-input 
-                v-model="currentStorage.accessKeySecret" 
-                type="password"
-                placeholder="阿里云AccessKey Secret"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="存储桶名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="bucket-name"
-              />
-            </t-form-item>
-            <t-form-item label="Endpoint" name="endpoint" class="form-item">
-              <t-input 
-                v-model="currentStorage.endpoint" 
-                placeholder="https://oss-cn-hangzhou.aliyuncs.com"
-              />
-              <template #help>
-                阿里云OSS的访问端点，例如：https://oss-cn-hangzhou.aliyuncs.com
-              </template>
-            </t-form-item>
-          </div>
+              <t-form-item label="AccessKey ID" name="accessKeyId">
+                <t-input 
+                  v-model="currentStorage.accessKeyId" 
+                  placeholder="阿里云AccessKey ID"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="AccessKey Secret" name="accessKeySecret">
+                <t-input 
+                  v-model="currentStorage.accessKeySecret" 
+                  type="password"
+                  placeholder="阿里云AccessKey Secret"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="存储桶名称" name="bucket">
+                <t-input 
+                  v-model="currentStorage.bucket" 
+                  placeholder="bucket-name"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="访问端点" name="endpoint">
+                <t-input 
+                  v-model="currentStorage.endpoint" 
+                  placeholder="https://oss-cn-hangzhou.aliyuncs.com"
+                />
+                <template #help>
+                  阿里云OSS的访问端点
+                </template>
+              </t-form-item>
+
+          
         </template>
 
         <!-- 七牛云KODO配置 -->
         <template v-if="currentStorage.type === 'qiniu'">
-          <div class="form-row">
-            <t-form-item label="AccessKey" name="accessKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.accessKey" 
-                placeholder="七牛云AccessKey"
-              />
-            </t-form-item>
-            <t-form-item label="SecretKey" name="secretKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.secretKey" 
-                type="password"
-                placeholder="七牛云SecretKey"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="存储桶名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="bucket-name"
-              />
-            </t-form-item>
-            <t-form-item label="Endpoint" name="endpoint" class="form-item">
-              <t-input 
-                v-model="currentStorage.endpoint" 
-                placeholder="https://s3-cn-east-1.qiniucs.com"
-              />
-              <template #help>
-                七牛云KODO的访问端点，例如：https://s3-cn-east-1.qiniucs.com
-              </template>
-            </t-form-item>
-          </div>
+              <t-form-item label="AccessKey" name="accessKey">
+                <t-input 
+                  v-model="currentStorage.accessKey" 
+                  placeholder="七牛云AccessKey"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="SecretKey" name="secretKey">
+                <t-input 
+                  v-model="currentStorage.secretKey" 
+                  type="password"
+                  placeholder="七牛云SecretKey"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="存储桶名称" name="bucket">
+                <t-input 
+                  v-model="currentStorage.bucket" 
+                  placeholder="bucket-name"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="访问端点" name="endpoint">
+                <t-input 
+                  v-model="currentStorage.endpoint" 
+                  placeholder="https://s3-cn-east-1.qiniucs.com"
+                />
+                <template #help>
+                  七牛云KODO的访问端点
+                </template>
+              </t-form-item>
+
+          
         </template>
 
         <!-- 又拍云USS配置 -->
         <template v-if="currentStorage.type === 'upyun'">
-          <div class="form-row">
-            <t-form-item label="操作员账号" name="operator" class="form-item">
-              <t-input 
-                v-model="currentStorage.operator" 
-                placeholder="又拍云操作员账号"
-              />
-            </t-form-item>
-            <t-form-item label="操作员密码" name="password" class="form-item">
-              <t-input 
-                v-model="currentStorage.password" 
-                type="password"
-                placeholder="又拍云操作员密码"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="服务名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="service-name"
-              />
-            </t-form-item>
-            <t-form-item label="Endpoint" name="endpoint" class="form-item">
-              <t-input 
-                v-model="currentStorage.endpoint" 
-                placeholder="https://v0.api.upyun.com"
-              />
-              <template #help>
-                又拍云USS的访问端点，例如：https://v0.api.upyun.com
-              </template>
-            </t-form-item>
-          </div>
+              <t-form-item label="操作员账号" name="operator">
+                <t-input 
+                  v-model="currentStorage.operator" 
+                  placeholder="又拍云操作员账号"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="操作员密码" name="password">
+                <t-input 
+                  v-model="currentStorage.password" 
+                  type="password"
+                  placeholder="又拍云操作员密码"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="服务名称" name="bucket">
+                <t-input 
+                  v-model="currentStorage.bucket" 
+                  placeholder="service-name"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="访问端点" name="endpoint">
+                <t-input 
+                  v-model="currentStorage.endpoint" 
+                  placeholder="https://v0.api.upyun.com"
+                />
+                <template #help>
+                  又拍云USS的访问端点
+                </template>
+              </t-form-item>
+
+          
         </template>
 
         <!-- Amazon S3配置 -->
         <template v-if="currentStorage.type === 's3'">
-          <div class="form-row">
-            <t-form-item label="Access Key ID" name="accessKeyId" class="form-item">
-              <t-input 
-                v-model="currentStorage.accessKeyId" 
-                placeholder="AWS Access Key ID"
-              />
-            </t-form-item>
-            <t-form-item label="Secret Access Key" name="secretAccessKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.secretAccessKey" 
-                type="password"
-                placeholder="AWS Secret Access Key"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="存储桶名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="bucket-name"
-              />
-            </t-form-item>
-            <t-form-item label="区域" name="region" class="form-item">
-              <t-input 
-                v-model="currentStorage.region" 
-                placeholder="us-east-1"
-              />
-              <template #help>
-                AWS区域，例如：us-east-1, eu-west-1
-              </template>
-            </t-form-item>
-          </div>
-          <t-form-item label="Endpoint (可选)" name="endpoint" class="form-item-full">
+              <t-form-item label="Access Key ID" name="accessKeyId">
+                <t-input 
+                  v-model="currentStorage.accessKeyId" 
+                  placeholder="AWS Access Key ID"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="Secret Access Key" name="secretAccessKey">
+                <t-input 
+                  v-model="currentStorage.secretAccessKey" 
+                  type="password"
+                  placeholder="AWS Secret Access Key"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="存储桶名称" name="bucket">
+                <t-input 
+                  v-model="currentStorage.bucket" 
+                  placeholder="bucket-name"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="区域" name="region">
+                <t-input 
+                  v-model="currentStorage.region" 
+                  placeholder="us-east-1"
+                />
+                <template #help>
+                  AWS区域，例如：us-east-1
+                </template>
+              </t-form-item>
+
+          
+          <t-form-item label="自定义端点" name="endpoint">
             <t-input 
               v-model="currentStorage.endpoint" 
-              placeholder="https://s3.amazonaws.com"
+              placeholder="https://s3.amazonaws.com（可选）"
             />
             <template #help>
               自定义S3端点，留空使用AWS默认端点
@@ -744,46 +756,50 @@
 
         <!-- MinIO配置 -->
         <template v-if="currentStorage.type === 'minio'">
-          <div class="form-row">
-            <t-form-item label="Access Key" name="accessKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.accessKey" 
-                placeholder="MinIO Access Key"
-              />
-            </t-form-item>
-            <t-form-item label="Secret Key" name="secretKey" class="form-item">
-              <t-input 
-                v-model="currentStorage.secretKey" 
-                type="password"
-                placeholder="MinIO Secret Key"
-              />
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="存储桶名称" name="bucket" class="form-item">
-              <t-input 
-                v-model="currentStorage.bucket" 
-                placeholder="bucket-name"
-              />
-            </t-form-item>
-            <t-form-item label="Endpoint" name="endpoint" class="form-item">
-              <t-input 
-                v-model="currentStorage.endpoint" 
-                placeholder="https://minio.example.com"
-              />
-              <template #help>
-                MinIO服务器地址，例如：https://minio.example.com:9000
-              </template>
-            </t-form-item>
-          </div>
-          <div class="form-row">
-            <t-form-item label="使用SSL" name="useSSL" class="form-item">
-              <t-switch v-model="currentStorage.useSSL" />
-              <template #help>
-                是否使用HTTPS连接MinIO服务器
-              </template>
-            </t-form-item>
-          </div>
+              <t-form-item label="Access Key" name="accessKey">
+                <t-input 
+                  v-model="currentStorage.accessKey" 
+                  placeholder="MinIO Access Key"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="Secret Key" name="secretKey">
+                <t-input 
+                  v-model="currentStorage.secretKey" 
+                  type="password"
+                  placeholder="MinIO Secret Key"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="存储桶名称" name="bucket">
+                <t-input 
+                  v-model="currentStorage.bucket" 
+                  placeholder="bucket-name"
+                />
+              </t-form-item>
+
+          
+              <t-form-item label="服务器地址" name="endpoint">
+                <t-input 
+                  v-model="currentStorage.endpoint" 
+                  placeholder="https://minio.example.com"
+                />
+                <template #help>
+                  MinIO服务器地址
+                </template>
+              </t-form-item>
+
+          
+              <t-form-item label="使用SSL连接" name="useSSL">
+                <t-switch v-model="currentStorage.useSSL" />
+                <template #help>
+                  是否使用HTTPS连接MinIO服务器
+                </template>
+              </t-form-item>
+
+          
         </template>
 
         <!-- 自定义域名 -->
@@ -872,7 +888,7 @@ const currentStorage = ref({
 // 系统配置
 const systemConfig = reactive({
   // 品牌设置
-  siteName: '图床管理系统',
+  siteName: 'CDNN图床',
   siteIcon: '',
   siteLogo: '',
   siteDescription: '专业的图片存储和管理平台',
@@ -1354,12 +1370,13 @@ onMounted(() => {
 
 <style scoped>
 .settings-page {
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0;
 }
 
 .page-header {
+  margin-top: 30px;
   margin-bottom: 32px;
 }
 
@@ -1506,40 +1523,31 @@ onMounted(() => {
   text-align: center;
 }
 
-/* 表单样式 */
+/* 表单样式 - 只保留非组件相关的样式 */
 .settings-form {
-  max-width: 800px;
+  max-width: 100%;
 }
 
 .form-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--td-border-level-1-color);
+  margin-bottom: 40px;
+  padding-bottom: 32px;
+  
 }
 
 .form-section:last-child {
   border-bottom: none;
   margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .form-section-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--td-text-color-primary);
-  margin: 0 0 16px 0;
-  padding-left: 8px;
-  border-left: 3px solid var(--td-brand-color);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.form-item-full {
-  grid-column: 1 / -1;
+  margin: 0 0 24px 0;
+  padding-left: 12px;
+  border-left: 4px solid var(--td-brand-color);
+  line-height: 1.5;
 }
 
 .form-actions {
@@ -1668,17 +1676,20 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .settings-page {
-    padding: 16px;
-  }
-  
   .settings-section {
     padding: 24px 16px;
   }
   
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .page-title {
+    font-size: 24px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .form-section-title {
+    font-size: 15px;
   }
   
   .storage-header {
@@ -1701,6 +1712,14 @@ onMounted(() => {
   .backup-actions {
     align-self: stretch;
     justify-content: flex-end;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions .t-button {
+    width: 100%;
   }
 }
 </style>

@@ -4,7 +4,7 @@
     <header class="layout-header">
       <div class="header-content">
         <!-- Logo和标题 -->
-        <div class="header-left">
+        <div class="header-left" @click="goToHome">
           <div class="logo" :class="{ 'logo-with-background': !siteLogo || logoError }">
             <img 
               v-if="siteLogo && !logoError" 
@@ -162,6 +162,11 @@ const handleLogout = async () => {
   await logout()
 }
 
+// 返回首页
+const goToHome = () => {
+  router.push('/upload')
+}
+
 // 检查服务器状态
 const checkServerStatus = async () => {
   try {
@@ -206,7 +211,7 @@ onUnmounted(() => {
 <style scoped>
 .layout-container {
   min-height: 100vh;
-  background-color: var(--td-bg-color-page);
+  background-color: transparent;
 }
 
 .layout-header {
@@ -217,13 +222,13 @@ onUnmounted(() => {
   z-index: 1000;
   background-color: var(--td-bg-color-container);
   border-bottom: 1px solid var(--td-border-level-1-color);
-  box-shadow: var(--td-shadow-1);
+  
 }
 
 .header-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  
   height: 64px;
   display: flex;
   align-items: center;
@@ -234,6 +239,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.header-left:hover {
+  opacity: 0.8;
 }
 
 .logo {
@@ -365,7 +376,7 @@ onUnmounted(() => {
 }
 
 .main-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
 }

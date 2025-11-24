@@ -106,6 +106,10 @@ const router = createRouter({
   routes
 })
 
+// 用于缓存token验证结果，避免频繁验证
+let tokenValidationCache: { token: string; validated: boolean; timestamp: number } | null = null
+const TOKEN_VALIDATION_TTL = 5 * 60 * 1000 // 5分钟缓存
+
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   // 获取认证状态
@@ -116,17 +120,13 @@ router.beforeEach(async (to, from, next) => {
   try {
     user = userData ? JSON.parse(userData) : null
   } catch (error) {
-
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
   
-  const isAuthenticated = !!(token && user)
-  const userRole = user?.role || 'guest'
-  
   // 设置页面标题
   const { siteName } = useSystemConfig()
-  const defaultSiteName = siteName.value || '图床管理系统'
+  const defaultSiteName = siteName.value
   
   if (to.meta.title) {
     document.title = `${to.meta.title} - ${defaultSiteName}`
@@ -151,24 +151,78 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   
-  // 检查是否需要登录
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    MessagePlugin.warning('请先登录')
-    next('/login')
-    return
-  }
-  
-  // 检查是否需要管理员权限
-  if (to.meta.requiresAdmin && userRole !== 'admin') {
-    MessagePlugin.error('权限不足，需要管理员权限')
-    next('/upload')
-    return
-  }
-  
   // 如果已登录用户访问登录/注册页面，重定向到首页
-  if ((to.name === 'Login' || to.name === 'Register') && isAuthenticated) {
+  if ((to.name === 'Login' || to.name === 'Register') && token && user) {
     next('/')
     return
+  }
+  
+  // 检查是否需要登录
+  if (to.meta.requiresAuth) {
+    if (!token || !user) {
+      // 没有token或用户信息，直接跳转登录
+      MessagePlugin.warning('请先登录')
+      next('/login')
+      return
+    }
+    
+    // 检查是否需要验证token
+    const now = Date.now()
+    const needValidation = !tokenValidationCache || 
+                          tokenValidationCache.token !== token ||
+                          (now - tokenValidationCache.timestamp) > TOKEN_VALIDATION_TTL
+    
+    if (needValidation) {
+      // 需要验证token
+      try {
+        const response = await apiService.getUserProfile()
+        if (!response.success || !response.data) {
+          // token无效，清除并跳转登录
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          tokenValidationCache = null
+          MessagePlugin.warning('登录已过期，请重新登录')
+          next('/login')
+          return
+        }
+        
+        // token有效，缓存验证结果
+        tokenValidationCache = {
+          token: token,
+          validated: true,
+          timestamp: now
+        }
+        
+        // 更新用户信息
+        const currentUser = response.data
+        localStorage.setItem('user', JSON.stringify(currentUser))
+        
+        const userRole = currentUser.role || 'guest'
+        
+        // 检查是否需要管理员权限
+        if (to.meta.requiresAdmin && userRole !== 'admin') {
+          MessagePlugin.error('权限不足，需要管理员权限')
+          next('/upload')
+          return
+        }
+      } catch (error) {
+        // 验证失败，清除token并跳转登录
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        tokenValidationCache = null
+        MessagePlugin.warning('登录验证失败，请重新登录')
+        next('/login')
+        return
+      }
+    } else {
+      // 使用缓存的验证结果，只检查管理员权限
+      const userRole = user?.role || 'guest'
+      if (to.meta.requiresAdmin && userRole !== 'admin') {
+        MessagePlugin.error('权限不足，需要管理员权限')
+        next('/upload')
+        return
+      }
+    }
   }
   
   next()

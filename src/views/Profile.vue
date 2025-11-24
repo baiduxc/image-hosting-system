@@ -286,12 +286,13 @@ onMounted(() => {
 
 <style scoped>
 .profile-page {
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0;
 }
 
 .page-header {
+  margin-top: 30px;
   margin-bottom: 32px;
 }
 
@@ -394,9 +395,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .profile-page {
-    padding: 16px;
-  }
   
   
   .info-item {
