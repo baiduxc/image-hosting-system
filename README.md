@@ -278,7 +278,7 @@ npm run build
 
 如有问题或建议，请通过以下方式联系：
 
-- 提交 Issue: [GitHub Issues](https://github.com/your-repo/issues)
+- 提交 Issue: [GitHub Issues](https://github.com/baiduxc/image-hosting-system)
 - 邮箱: xcljxf@gmial.com
 
 ## 🙏 致谢
