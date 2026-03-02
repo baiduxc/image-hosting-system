@@ -106,67 +106,83 @@
             <!-- 品牌设置 -->
             <div class="form-section">
               <h4 class="form-section-title">品牌设置</h4>
-              <t-form-item label="网站名称" name="siteName">
-                <t-input 
-                  v-model="systemConfig.siteName" 
-                  placeholder="图床管理系统"
-                />
-              </t-form-item>
-              
-              <t-form-item label="网站描述" name="siteDescription">
-                <t-input 
-                  v-model="systemConfig.siteDescription" 
-                  placeholder="专业的图片存储和管理平台"
-                />
-              </t-form-item>
-              
-              <t-form-item label="网站图标" name="siteIcon">
-                <t-input 
-                  v-model="systemConfig.siteIcon" 
-                  placeholder="https://example.com/favicon.ico"
-                />
-                <template #help>
-                  网站图标URL，显示在浏览器标签页
-                </template>
-              </t-form-item>
-              
-              <t-form-item label="网站Logo" name="siteLogo">
-                <t-input 
-                  v-model="systemConfig.siteLogo" 
-                  placeholder="https://example.com/logo.png"
-                />
-                <template #help>
-                  网站Logo URL，显示在导航栏
-                </template>
-              </t-form-item>
+              <t-row :gutter="24">
+                <t-col :span="12">
+                  <t-form-item label="网站名称" name="siteName">
+                    <t-input 
+                      v-model="systemConfig.siteName" 
+                      placeholder="图床管理系统"
+                    />
+                  </t-form-item>
+                </t-col>
+                <t-col :span="12">
+                  <t-form-item label="网站描述" name="siteDescription">
+                    <t-input 
+                      v-model="systemConfig.siteDescription" 
+                      placeholder="专业的图片存储和管理平台"
+                    />
+                  </t-form-item>
+                </t-col>
+              </t-row>
+              <t-row :gutter="24">
+                <t-col :span="12">
+                  <t-form-item label="网站图标" name="siteIcon">
+                    <t-input 
+                      v-model="systemConfig.siteIcon" 
+                      placeholder="https://example.com/favicon.ico"
+                    />
+                    <template #help>
+                      网站图标URL，显示在浏览器标签页
+                    </template>
+                  </t-form-item>
+                </t-col>
+                <t-col :span="12">
+                  <t-form-item label="网站Logo" name="siteLogo">
+                    <t-input 
+                      v-model="systemConfig.siteLogo" 
+                      placeholder="https://example.com/logo.png"
+                    />
+                    <template #help>
+                      网站Logo URL，显示在导航栏
+                    </template>
+                  </t-form-item>
+                </t-col>
+              </t-row>
             </div>
 
             <!-- 上传设置 -->
             <div class="form-section">
               <h4 class="form-section-title">上传设置</h4>
-              <t-form-item label="最大文件大小" name="maxFileSize">
-                <t-input-number 
-                  v-model="systemConfig.maxFileSize" 
-                  :min="1" 
-                  :max="100"
-                  placeholder="10"
-                />
-                <template #help>
-                  单位：MB
-                </template>
-              </t-form-item>
-              
-              <t-form-item label="批量上传数量" name="maxBatchCount">
-                <t-input-number 
-                  v-model="systemConfig.maxBatchCount" 
-                  :min="1" 
-                  :max="50"
-                  placeholder="20"
-                />
-                <template #help>
-                  单次最多上传文件数
-                </template>
-              </t-form-item>
+              <t-row :gutter="24">
+                <t-col :span="12">
+                  <t-form-item label="最大文件大小" name="maxFileSize">
+                    <t-input-number 
+                      v-model="systemConfig.maxFileSize" 
+                      :min="1" 
+                      :max="100"
+                      placeholder="10"
+                      style="width: 100%"
+                    />
+                    <template #help>
+                      单位：MB
+                    </template>
+                  </t-form-item>
+                </t-col>
+                <t-col :span="12">
+                  <t-form-item label="批量上传数量" name="maxBatchCount">
+                    <t-input-number 
+                      v-model="systemConfig.maxBatchCount" 
+                      :min="1" 
+                      :max="50"
+                      placeholder="20"
+                      style="width: 100%"
+                    />
+                    <template #help>
+                      单次最多上传文件数
+                    </template>
+                  </t-form-item>
+                </t-col>
+              </t-row>
               
               <t-form-item label="允许的文件类型" name="allowedTypes">
                 <t-select 
@@ -177,22 +193,27 @@
                 />
               </t-form-item>
 
-              <t-form-item label="自动压缩图片" name="autoCompress">
-                <t-switch v-model="systemConfig.autoCompress" />
-                <template #help>
-                  上传时自动压缩图片
-                </template>
-              </t-form-item>
-              
-              <t-form-item v-if="systemConfig.autoCompress" label="压缩质量" name="compressQuality">
-                <t-slider 
-                  v-model="systemConfig.compressQuality" 
-                  :min="10" 
-                  :max="100"
-                  :step="5"
-                  :marks="{ 50: '50%', 80: '80%' }"
-                />
-              </t-form-item>
+              <t-row :gutter="24">
+                <t-col :span="12">
+                  <t-form-item label="自动压缩图片" name="autoCompress">
+                    <t-switch v-model="systemConfig.autoCompress" />
+                    <template #help>
+                      上传时自动压缩图片
+                    </template>
+                  </t-form-item>
+                </t-col>
+                <t-col :span="12">
+                  <t-form-item v-if="systemConfig.autoCompress" label="压缩质量" name="compressQuality">
+                    <t-slider 
+                      v-model="systemConfig.compressQuality" 
+                      :min="10" 
+                      :max="100"
+                      :step="5"
+                      :marks="{ 50: '50%', 80: '80%' }"
+                    />
+                  </t-form-item>
+                </t-col>
+              </t-row>
             </div>
 
             <!-- 用户管理设置 -->
@@ -233,74 +254,91 @@
             :colon="false"
             class="settings-form"
           >
-            <t-form-item label="SMTP服务器" name="smtpHost">
-              <t-input 
-                v-model="emailConfig.smtpHost" 
-                placeholder="smtp.gmail.com"
-              />
-              <template #help>
-                Gmail: smtp.gmail.com | QQ邮箱: smtp.qq.com | 163邮箱: smtp.163.com
-              </template>
-            </t-form-item>
+            <t-row :gutter="24">
+              <t-col :span="12">
+                <t-form-item label="SMTP服务器" name="smtpHost">
+                  <t-input 
+                    v-model="emailConfig.smtpHost" 
+                    placeholder="smtp.gmail.com"
+                  />
+                  <template #help>
+                    Gmail: smtp.gmail.com | QQ邮箱: smtp.qq.com
+                  </template>
+                </t-form-item>
+              </t-col>
+              <t-col :span="6">
+                <t-form-item label="SMTP端口" name="smtpPort">
+                  <t-input-number 
+                    v-model="emailConfig.smtpPort" 
+                    :min="1" 
+                    :max="65535"
+                    placeholder="587"
+                    style="width: 100%"
+                  />
+                </t-form-item>
+              </t-col>
+              <t-col :span="6">
+                <t-form-item label="SSL/TLS加密" name="smtpSecure">
+                  <t-switch 
+                    v-model="emailConfig.smtpSecure"
+                  />
+                  <template #help>
+                    端口465使用SSL
+                  </template>
+                </t-form-item>
+              </t-col>
+            </t-row>
             
-            <t-form-item label="SMTP端口" name="smtpPort">
-              <t-input-number 
-                v-model="emailConfig.smtpPort" 
-                :min="1" 
-                :max="65535"
-                placeholder="587"
-              />
-            </t-form-item>
+            <t-row :gutter="24">
+              <t-col :span="12">
+                <t-form-item label="SMTP用户名" name="smtpUser">
+                  <t-input 
+                    v-model="emailConfig.smtpUser" 
+                    placeholder="用户名或邮箱"
+                  />
+                </t-form-item>
+              </t-col>
+              <t-col :span="12">
+                <t-form-item label="SMTP密码" name="smtpPass">
+                  <t-input 
+                    v-model="emailConfig.smtpPass" 
+                    type="password"
+                    placeholder="应用专用密码或授权码"
+                  />
+                  <template #help>
+                    Gmail需使用"应用专用密码"：
+                    <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #0052d9;">点击获取</a>
+                  </template>
+                </t-form-item>
+              </t-col>
+            </t-row>
 
-            <t-form-item label="SSL/TLS加密" name="smtpSecure">
-              <t-switch 
-                v-model="emailConfig.smtpSecure"
-              />
-              <template #help>
-                端口465通常使用SSL，端口587通常使用TLS
-              </template>
-            </t-form-item>
+            <t-row :gutter="24">
+              <t-col :span="12">
+                <t-form-item label="发件人邮箱" name="fromEmail">
+                  <t-input 
+                    v-model="emailConfig.fromEmail" 
+                    placeholder="noreply@example.com"
+                  />
+                </t-form-item>
+              </t-col>
+              <t-col :span="12">
+                <t-form-item label="发件人名称" name="fromName">
+                  <t-input 
+                    v-model="emailConfig.fromName" 
+                    placeholder="图床系统"
+                  />
+                </t-form-item>
+              </t-col>
+            </t-row>
             
-            <t-form-item label="测试邮箱" name="testEmail">
+            <t-form-item label="测试收件邮箱" name="testEmail">
               <t-input 
                 v-model="emailConfig.testEmail" 
                 placeholder="test@example.com"
               />
               <template #help>
                 用于接收测试邮件的邮箱地址
-              </template>
-            </t-form-item>
-
-            <t-form-item label="发件人邮箱" name="fromEmail">
-              <t-input 
-                v-model="emailConfig.fromEmail" 
-                placeholder="noreply@example.com"
-              />
-            </t-form-item>
-            
-            <t-form-item label="发件人名称" name="fromName">
-              <t-input 
-                v-model="emailConfig.fromName" 
-                placeholder="图床系统"
-              />
-            </t-form-item>
-
-            <t-form-item label="SMTP用户名" name="smtpUser">
-              <t-input 
-                v-model="emailConfig.smtpUser" 
-                placeholder="用户名或邮箱"
-              />
-            </t-form-item>
-            
-            <t-form-item label="SMTP密码" name="smtpPass">
-              <t-input 
-                v-model="emailConfig.smtpPass" 
-                type="password"
-                placeholder="应用专用密码或授权码"
-              />
-              <template #help>
-                Gmail需使用"应用专用密码"（非账户密码）：
-                <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #0052d9;">点击获取</a>
               </template>
             </t-form-item>
 
@@ -335,36 +373,44 @@
             :colon="false"
             class="settings-form"
           >
-            <t-form-item label="邮箱验证" name="requireEmailVerification">
-              <t-switch v-model="securityConfig.requireEmailVerification" />
-              <template #help>
-                开启后，新用户注册需要验证邮箱才能使用
-              </template>
-            </t-form-item>
-
-            <t-form-item label="JWT过期时间" name="jwtExpiration">
-              <t-input-number 
-                v-model="securityConfig.jwtExpiration" 
-                :min="1" 
-                :max="720"
-                placeholder="24"
-              />
-              <template #help>
-                单位：小时
-              </template>
-            </t-form-item>
-            
-            <t-form-item label="最大登录尝试" name="maxLoginAttempts">
-              <t-input-number 
-                v-model="securityConfig.maxLoginAttempts" 
-                :min="3" 
-                :max="20"
-                placeholder="5"
-              />
-              <template #help>
-                超过次数将被锁定
-              </template>
-            </t-form-item>
+            <t-row :gutter="24">
+              <t-col :span="8">
+                <t-form-item label="邮箱验证" name="requireEmailVerification">
+                  <t-switch v-model="securityConfig.requireEmailVerification" />
+                  <template #help>
+                    新用户注册需验证邮箱
+                  </template>
+                </t-form-item>
+              </t-col>
+              <t-col :span="8">
+                <t-form-item label="JWT过期时间" name="jwtExpiration">
+                  <t-input-number 
+                    v-model="securityConfig.jwtExpiration" 
+                    :min="1" 
+                    :max="720"
+                    placeholder="24"
+                    style="width: 100%"
+                  />
+                  <template #help>
+                    单位：小时
+                  </template>
+                </t-form-item>
+              </t-col>
+              <t-col :span="8">
+                <t-form-item label="最大登录尝试" name="maxLoginAttempts">
+                  <t-input-number 
+                    v-model="securityConfig.maxLoginAttempts" 
+                    :min="3" 
+                    :max="20"
+                    placeholder="5"
+                    style="width: 100%"
+                  />
+                  <template #help>
+                    超过次数将被锁定
+                  </template>
+                </t-form-item>
+              </t-col>
+            </t-row>
 
             <div class="form-actions">
               <t-button theme="primary" @click="saveSecurityConfig" :loading="isSaving">
@@ -1405,7 +1451,7 @@ onMounted(() => {
 
 .page-header {
   margin-top: 30px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .page-title {
@@ -1422,13 +1468,26 @@ onMounted(() => {
 }
 
 .settings-tabs {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--td-bg-color-container);
+  border-radius: 12px;
+  border: 1px solid var(--td-border-level-1-color);
+  overflow: hidden;
+}
+
+.settings-tabs :deep(.t-tabs__content) {
+  overflow: hidden;
+}
+
+.settings-tabs :deep(.t-tabs__nav) {
+  background: var(--td-bg-color-component);
+  border-bottom: 1px solid var(--td-border-level-1-color);
+  padding: 0 16px;
 }
 
 .settings-section {
   padding: 32px;
+  background: var(--td-bg-color-container);
+  overflow: hidden;
 }
 
 .section-header {
@@ -1463,8 +1522,9 @@ onMounted(() => {
 }
 
 .storage-card {
+  background: var(--td-bg-color-component);
   border: 1px solid var(--td-border-level-1-color);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 16px;
   transition: all 0.2s;
@@ -1472,12 +1532,13 @@ onMounted(() => {
 
 .storage-card:hover {
   border-color: var(--td-brand-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .storage-card.active {
   border-color: var(--td-brand-color);
   background: var(--td-brand-color-light);
+  box-shadow: 0 4px 12px var(--td-brand-color-light);
 }
 
 .storage-header {
@@ -1546,20 +1607,39 @@ onMounted(() => {
 
 .add-storage-section {
   border: 2px dashed var(--td-border-level-1-color);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 32px;
   text-align: center;
+  background: var(--td-bg-color-component);
+  transition: all 0.2s;
 }
 
-/* 表单样式 - 只保留非组件相关的样式 */
+.add-storage-section:hover {
+  border-color: var(--td-brand-color);
+  background: var(--td-brand-color-light);
+}
+
+/* 表单样式 */
 .settings-form {
   max-width: 100%;
+  overflow: hidden;
+}
+
+.settings-form :deep(.t-row) {
+  margin-bottom: 0;
+}
+
+.settings-form :deep(.t-form__item) {
+  margin-bottom: 24px;
+}
+
+.settings-form :deep(.t-form__label) {
+  padding-bottom: 8px;
 }
 
 .form-section {
   margin-bottom: 40px;
   padding-bottom: 32px;
-  
 }
 
 .form-section:last-child {
@@ -1589,10 +1669,10 @@ onMounted(() => {
 
 /* 数据库管理样式 */
 .info-card {
-  background: var(--td-bg-color-container);
+  background: var(--td-bg-color-component);
   border: 1px solid var(--td-border-level-1-color);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 10px;
+  padding: 24px;
   margin-bottom: 24px;
 }
 
@@ -1643,16 +1723,16 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: var(--td-bg-color-container);
+  background: var(--td-bg-color-component);
   border: 1px solid var(--td-border-level-1-color);
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 12px;
   transition: all 0.2s;
 }
 
 .backup-item:hover {
   border-color: var(--td-brand-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .backup-info {
@@ -1703,6 +1783,17 @@ onMounted(() => {
 }
 
 /* 响应式设计 */
+@media (max-width: 992px) {
+  .settings-form :deep(.t-row) {
+    flex-wrap: wrap;
+  }
+  
+  .settings-form :deep(.t-col) {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .settings-section {
     padding: 24px 16px;

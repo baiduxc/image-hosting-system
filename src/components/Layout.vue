@@ -81,7 +81,8 @@ import {
   UserIcon,
   ChevronDownIcon,
   LogOutIcon,
-  UserCogIcon
+  UserCogIcon,
+  CodeIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
@@ -104,7 +105,8 @@ const globalLoading = ref(false)
 const navItems = computed(() => {
   const items = [
     { name: 'Upload', path: '/upload', title: '上传', icon: 'upload' },
-    { name: 'Manage', path: '/manage', title: '管理', icon: 'folder' }
+    { name: 'Manage', path: '/manage', title: '管理', icon: 'folder' },
+    { name: 'Api', path: '/api', title: 'API', icon: 'code' }
   ]
   
   // 只有管理员才能看到统计和设置页面
@@ -140,7 +142,8 @@ const getIcon = (iconName: string) => {
     upload: UploadIcon,
     folder: FolderIcon,
     chart: BarChart3Icon,
-    settings: SettingsIcon
+    settings: SettingsIcon,
+    code: CodeIcon
   }
   return (iconMap as any)[iconName] || UploadIcon
 }

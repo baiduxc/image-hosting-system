@@ -2,613 +2,211 @@
   <div class="profile-page">
     <div class="page-header">
       <h1 class="page-title">个人中心</h1>
-      <p class="page-description">管理您的个人信息、账户设置和 API 密钥</p>
+      <p class="page-description">管理您的账户信息和安全设置</p>
     </div>
 
-    <t-tabs v-model="mainTab" class="main-tabs">
-      <!-- 基本信息 Tab -->
-      <t-tab-panel value="info" label="基本信息">
-        <div class="profile-content">
-          <t-row :gutter="24">
-            <!-- 左侧：个人信息 -->
-            <t-col :xl="12" :lg="12" :md="24" :sm="24">
-              <t-card class="profile-card">
-                <template #header>
-                  <h3 class="card-title">
-                    <UserIcon class="card-icon" />
-                    个人信息
-                  </h3>
-                </template>
-
-                <div class="profile-info">
-                  <!-- 头像显示 -->
-                  <div class="avatar-section">
-                    <div class="avatar-container">
-                      <t-avatar 
-                        size="120px"
-                        :alt="userInfo.username"
-                        class="user-avatar"
-                      >
-                        {{ userInfo.username?.charAt(0).toUpperCase() }}
-                      </t-avatar>
-                    </div>
-                  </div>
-
-                  <!-- 基本信息 -->
-                  <div class="info-section">
-                    <div class="info-item">
-                      <span class="info-label">用户名</span>
-                      <span class="info-value">{{ userInfo.username }}</span>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">邮箱</span>
-                      <span class="info-value">{{ userInfo.email }}</span>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">角色</span>
-                      <t-tag 
-                        :theme="userInfo.role === 'admin' ? 'primary' : 'default'"
-                        size="small"
-                      >
-                        {{ userInfo.role === 'admin' ? '管理员' : '用户' }}
-                      </t-tag>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">注册时间</span>
-                      <span class="info-value">{{ formatDate(userInfo.createdAt) }}</span>
-                    </div>
-                  </div>
-                </div>
-              </t-card>
-            </t-col>
-
-            <!-- 右侧：账户设置 -->
-            <t-col :xl="12" :lg="12" :md="24" :sm="24">
-              <t-card class="settings-card">
-                <template #header>
-                  <h3 class="card-title">
-                    <SettingsIcon class="card-icon" />
-                    账户设置
-                  </h3>
-                </template>
-
-                <t-tabs v-model="activeTab" class="settings-tabs">
-                  <!-- 修改密码 -->
-                  <t-tab-panel value="password" label="修改密码">
-                <t-form
-                  ref="passwordForm"
-                  :data="passwordData"
-                  :rules="passwordRules"
-                  layout="vertical"
-                  @submit="handlePasswordSubmit"
-                >
-                  <t-form-item label="当前密码" name="currentPassword">
-                    <t-input
-                      v-model="passwordData.currentPassword"
-                      type="password"
-                      placeholder="请输入当前密码"
-                      clearable
-                    />
-                  </t-form-item>
-                  <t-form-item label="新密码" name="newPassword">
-                    <t-input
-                      v-model="passwordData.newPassword"
-                      type="password"
-                      placeholder="请输入新密码"
-                      clearable
-                    />
-                  </t-form-item>
-                  <t-form-item label="确认新密码" name="confirmPassword">
-                    <t-input
-                      v-model="passwordData.confirmPassword"
-                      type="password"
-                      placeholder="请再次输入新密码"
-                      clearable
-                    />
-                  </t-form-item>
-                  <div class="form-actions">
-                    <t-button theme="primary" type="submit" :loading="isSubmitting">
-                      修改密码
-                    </t-button>
-                  </div>
-                </t-form>
-              </t-tab-panel>
-
-                  <!-- 个人资料 -->
-                  <t-tab-panel value="profile" label="个人资料">
-                    <t-form
-                      ref="profileForm"
-                      :data="profileData"
-                      :rules="profileRules"
-                      layout="vertical"
-                      @submit="handleProfileSubmit"
-                    >
-                      <t-form-item label="邮箱" name="email">
-                        <t-input
-                          v-model="profileData.email"
-                          type="email"
-                          placeholder="请输入邮箱"
-                          clearable
-                        />
-                      </t-form-item>
-                      <div class="form-actions">
-                        <t-button theme="primary" type="submit" :loading="isSubmitting">
-                          保存修改
-                        </t-button>
-                      </div>
-                    </t-form>
-                  </t-tab-panel>
-
-                </t-tabs>
-              </t-card>
-            </t-col>
-          </t-row>
+    <!-- 用户信息区 -->
+    <div class="user-banner">
+      <div class="user-info">
+        <t-avatar size="56px" class="user-avatar">
+          {{ userInfo.username?.charAt(0).toUpperCase() }}
+        </t-avatar>
+        <div class="user-details">
+          <div class="user-name-row">
+            <span class="user-name">{{ userInfo.username }}</span>
+            <t-tag :theme="userInfo.role === 'admin' ? 'primary' : 'default'" size="small">
+              {{ userInfo.role === 'admin' ? '管理员' : '用户' }}
+            </t-tag>
+          </div>
+          <div class="user-meta">
+            <span class="meta-item">
+              <MailIcon class="meta-icon" />
+              {{ userInfo.email || '未绑定邮箱' }}
+            </span>
+            <span class="meta-divider">·</span>
+            <span class="meta-item">
+              <CalendarIcon class="meta-icon" />
+              {{ formatDate(userInfo.createdAt) }} 加入
+            </span>
+          </div>
         </div>
-      </t-tab-panel>
+      </div>
+    </div>
 
-      <!-- API 密钥 Tab -->
-      <t-tab-panel value="api" label="API 密钥">
-        <div class="api-content">
-          <t-card class="api-card">
-            <template #header>
-              <div class="api-card-header">
-                <h3 class="card-title">
-                  <KeyIcon class="card-icon" />
-                  API 密钥管理
-                </h3>
-                <t-button theme="primary" @click="showCreateKeyDialog = true">
-                  <template #icon><PlusIcon /></template>
-                  创建密钥
-                </t-button>
-              </div>
-            </template>
-
-            <t-alert theme="info" style="margin-bottom: 16px;">
-              <template #message>
-                API 密钥用于通过接口上传和管理图片。请妥善保管您的密钥，不要泄露给他人。
-              </template>
-            </t-alert>
-
-            <t-table
-              :data="apiKeys"
-              :columns="apiKeyColumns"
-              :loading="loadingKeys"
-              row-key="id"
-              hover
-              stripe
-            >
-              <template #permissions="{ row }">
-                <t-space size="small">
-                  <t-tag 
-                    v-for="perm in row.permissions" 
-                    :key="perm" 
-                    size="small"
-                    :theme="getPermissionTheme(perm)"
-                  >
-                    {{ getPermissionLabel(perm) }}
-                  </t-tag>
-                </t-space>
-              </template>
-              <template #is_active="{ row }">
-                <t-tag :theme="row.is_active ? 'success' : 'default'" size="small">
-                  {{ row.is_active ? '启用' : '禁用' }}
-                </t-tag>
-              </template>
-              <template #last_used_at="{ row }">
-                {{ row.last_used_at ? formatDateTime(row.last_used_at) : '从未使用' }}
-              </template>
-              <template #operation="{ row }">
-                <t-space size="small">
-                  <t-button 
-                    theme="default" 
-                    variant="text" 
-                    size="small"
-                    @click="toggleKeyStatus(row)"
-                  >
-                    {{ row.is_active ? '禁用' : '启用' }}
-                  </t-button>
-                  <t-popconfirm
-                    content="确定要删除此 API 密钥吗？删除后无法恢复。"
-                    @confirm="deleteKey(row.id)"
-                  >
-                    <t-button theme="danger" variant="text" size="small">删除</t-button>
-                  </t-popconfirm>
-                </t-space>
-              </template>
-            </t-table>
-          </t-card>
+    <!-- 操作区域 -->
+    <div class="sections-grid">
+      <!-- 修改密码 -->
+      <div class="section-card">
+        <div class="section-header">
+          <LockIcon class="section-icon" />
+          <span class="section-title">修改密码</span>
         </div>
-      </t-tab-panel>
-
-      <!-- API 文档 Tab -->
-      <t-tab-panel value="docs" label="API 文档">
-        <div class="docs-content">
-          <t-card class="docs-card">
-            <template #header>
-              <h3 class="card-title">
-                <BookOpenIcon class="card-icon" />
-                API 接口文档
-              </h3>
-            </template>
-
-            <div class="docs-section">
-              <h4>认证方式</h4>
-              <p>在请求头中添加 <code>X-API-Key</code>，或在 URL 查询参数中添加 <code>api_key</code>。</p>
-              <div class="code-block">
-                <pre>curl -X POST "{{ apiBaseUrl }}/upload" \
-  -H "X-API-Key: your_api_key" \
-  -F "images=@/path/to/image.jpg"</pre>
-              </div>
-            </div>
-
-            <div class="docs-section">
-              <h4>权限说明</h4>
-              <t-table :data="permissionDocs" :columns="permissionColumns" hover stripe />
-            </div>
-
-            <div class="docs-section">
-              <h4>API 接口</h4>
-              
-              <t-collapse>
-                <t-collapse-panel header="POST /upload - 上传图片" value="upload">
-                  <p><strong>权限：</strong> upload</p>
-                  <p><strong>请求方式：</strong> multipart/form-data</p>
-                  <p><strong>参数：</strong></p>
-                  <ul>
-                    <li><code>images</code> - 图片文件（支持多文件）</li>
-                    <li><code>storage_id</code> - (可选) 指定存储配置 ID</li>
-                  </ul>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl -X POST "{{ apiBaseUrl }}/upload" \
-  -H "X-API-Key: sk_xxxx" \
-  -F "images=@image1.jpg" \
-  -F "images=@image2.png"</pre>
-                  </div>
-                  <p><strong>响应示例：</strong></p>
-                  <div class="code-block">
-                    <pre>{
-  "success": true,
-  "code": "UPLOAD_SUCCESS",
-  "message": "成功上传 2 个文件",
-  "data": {
-    "uploaded": [
-      { "id": 1, "url": "https://...", "filename": "..." }
-    ],
-    "failed": []
-  }
-}</pre>
-                  </div>
-                </t-collapse-panel>
-
-                <t-collapse-panel header="GET /images - 获取图片列表" value="images">
-                  <p><strong>权限：</strong> view</p>
-                  <p><strong>查询参数：</strong></p>
-                  <ul>
-                    <li><code>page</code> - 页码，默认 1</li>
-                    <li><code>limit</code> - 每页数量，默认 20，最大 100</li>
-                  </ul>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl "{{ apiBaseUrl }}/images?page=1&limit=20" \
-  -H "X-API-Key: sk_xxxx"</pre>
-                  </div>
-                </t-collapse-panel>
-
-                <t-collapse-panel header="GET /images/:id - 获取单张图片" value="image-detail">
-                  <p><strong>权限：</strong> view</p>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl "{{ apiBaseUrl }}/images/123" \
-  -H "X-API-Key: sk_xxxx"</pre>
-                  </div>
-                </t-collapse-panel>
-
-                <t-collapse-panel header="DELETE /images/:id - 删除图片" value="delete">
-                  <p><strong>权限：</strong> delete</p>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl -X DELETE "{{ apiBaseUrl }}/images/123" \
-  -H "X-API-Key: sk_xxxx"</pre>
-                  </div>
-                </t-collapse-panel>
-
-                <t-collapse-panel header="POST /images/batch-delete - 批量删除" value="batch-delete">
-                  <p><strong>权限：</strong> delete</p>
-                  <p><strong>请求体：</strong></p>
-                  <div class="code-block">
-                    <pre>{ "ids": [1, 2, 3] }</pre>
-                  </div>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl -X POST "{{ apiBaseUrl }}/images/batch-delete" \
-  -H "X-API-Key: sk_xxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"ids": [1, 2, 3]}'</pre>
-                  </div>
-                </t-collapse-panel>
-
-                <t-collapse-panel header="GET /stats - 获取统计信息" value="stats">
-                  <p><strong>权限：</strong> view</p>
-                  <p><strong>示例：</strong></p>
-                  <div class="code-block">
-                    <pre>curl "{{ apiBaseUrl }}/stats" \
-  -H "X-API-Key: sk_xxxx"</pre>
-                  </div>
-                </t-collapse-panel>
-              </t-collapse>
-            </div>
-
-            <div class="docs-section">
-              <h4>错误码说明</h4>
-              <t-table :data="errorCodeDocs" :columns="errorCodeColumns" hover stripe />
-            </div>
-          </t-card>
-        </div>
-      </t-tab-panel>
-    </t-tabs>
-
-    <!-- 创建 API 密钥对话框 -->
-    <t-dialog
-      v-model:visible="showCreateKeyDialog"
-      header="创建 API 密钥"
-      :confirm-btn="{ content: '创建', loading: creatingKey }"
-      @confirm="createApiKey"
-    >
-      <t-form :data="newKeyData" layout="vertical">
-        <t-form-item label="密钥名称" required>
-          <t-input v-model="newKeyData.name" placeholder="例如：博客上传、自动备份" />
-        </t-form-item>
-        <t-form-item label="权限">
-          <t-checkbox-group v-model="newKeyData.permissions">
-            <t-checkbox value="upload">上传图片</t-checkbox>
-            <t-checkbox value="view">查看图片</t-checkbox>
-            <t-checkbox value="delete">删除图片</t-checkbox>
-            <t-checkbox value="all">所有权限</t-checkbox>
-          </t-checkbox-group>
-        </t-form-item>
-      </t-form>
-    </t-dialog>
-
-    <!-- 显示新创建的密钥对话框 -->
-    <t-dialog
-      v-model:visible="showNewKeyDialog"
-      header="API 密钥创建成功"
-      :footer="false"
-      width="600px"
-    >
-      <t-alert theme="warning" style="margin-bottom: 16px;">
-        <template #message>
-          请立即复制并妥善保存此密钥，关闭对话框后将无法再次查看完整密钥！
-        </template>
-      </t-alert>
-      <div class="new-key-display">
-        <t-input v-model="newCreatedKey" readonly>
-          <template #suffix>
-            <t-button variant="text" @click="copyKey(newCreatedKey)">
-              <CopyIcon style="width: 16px; height: 16px;" />
+        <t-form
+          ref="passwordForm"
+          :data="passwordData"
+          :rules="passwordRules"
+          layout="vertical"
+          class="compact-form"
+          @submit="handlePasswordSubmit"
+        >
+          <t-form-item label="当前密码" name="currentPassword">
+            <t-input
+              v-model="passwordData.currentPassword"
+              type="password"
+              placeholder="请输入当前密码"
+              size="medium"
+            />
+          </t-form-item>
+          <div class="form-row">
+            <t-form-item label="新密码" name="newPassword">
+              <t-input
+                v-model="passwordData.newPassword"
+                type="password"
+                placeholder="至少6位"
+                size="medium"
+              />
+            </t-form-item>
+            <t-form-item label="确认密码" name="confirmPassword">
+              <t-input
+                v-model="passwordData.confirmPassword"
+                type="password"
+                placeholder="再次输入"
+                size="medium"
+              />
+            </t-form-item>
+          </div>
+          <div class="form-actions">
+            <t-button theme="primary" size="medium" type="submit" :loading="isSubmitting">
+              更新密码
             </t-button>
-          </template>
-        </t-input>
+          </div>
+        </t-form>
       </div>
-      <div style="margin-top: 16px; text-align: right;">
-        <t-button theme="primary" @click="showNewKeyDialog = false">我已保存</t-button>
+
+      <!-- 修改邮箱 -->
+      <div class="section-card">
+        <div class="section-header">
+          <MailIcon class="section-icon" />
+          <span class="section-title">修改邮箱</span>
+        </div>
+        <t-form
+          ref="profileForm"
+          :data="profileData"
+          :rules="profileRules"
+          layout="vertical"
+          class="compact-form"
+          @submit="handleProfileSubmit"
+        >
+          <t-form-item label="当前邮箱">
+            <t-input :value="userInfo.email || '未设置'" disabled size="medium" />
+          </t-form-item>
+          <t-form-item label="新邮箱" name="email">
+            <t-input
+              v-model="profileData.email"
+              placeholder="请输入新邮箱地址"
+              size="medium"
+            />
+          </t-form-item>
+          <div class="form-actions">
+            <t-button theme="primary" size="medium" type="submit" :loading="isSubmitting">
+              更新邮箱
+            </t-button>
+          </div>
+        </t-form>
       </div>
-    </t-dialog>
+
+      <!-- 账户统计 -->
+      <div class="section-card stats-card">
+        <div class="section-header">
+          <BarChart3Icon class="section-icon" />
+          <span class="section-title">账户概览</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-number">{{ stats.imageCount || 0 }}</span>
+            <span class="stat-label">图片数量</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number">{{ formatSize(stats.totalSize || 0) }}</span>
+            <span class="stat-label">存储空间</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number">{{ stats.apiKeyCount || 0 }}</span>
+            <span class="stat-label">API 密钥</span>
+          </div>
+        </div>
+        <div class="last-login">
+          <ClockIcon class="meta-icon" />
+          最近登录：{{ formatDateTime(userInfo.lastLoginAt) }}
+        </div>
+      </div>
+
+      <!-- 快捷入口 -->
+      <div class="section-card quick-card">
+        <div class="section-header">
+          <ZapIcon class="section-icon" />
+          <span class="section-title">快捷入口</span>
+        </div>
+        <div class="quick-grid">
+          <div class="quick-item" @click="goToPage('/upload')">
+            <UploadIcon class="quick-icon upload" />
+            <span>上传图片</span>
+          </div>
+          <div class="quick-item" @click="goToPage('/manage')">
+            <FolderIcon class="quick-icon manage" />
+            <span>管理图片</span>
+          </div>
+          <div class="quick-item" @click="goToPage('/api')">
+            <CodeIcon class="quick-icon api" />
+            <span>API 接口</span>
+          </div>
+          <div class="quick-item" @click="goToPage('/stats')" v-if="userInfo.role === 'admin'">
+            <BarChart3Icon class="quick-icon stats" />
+            <span>数据统计</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
-  UserIcon,
-  SettingsIcon,
-  KeyIcon,
-  PlusIcon,
-  BookOpenIcon,
-  CopyIcon
+  MailIcon,
+  CalendarIcon,
+  ClockIcon,
+  LockIcon,
+  ZapIcon,
+  UploadIcon,
+  FolderIcon,
+  CodeIcon,
+  BarChart3Icon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { apiService } from '@/services/api'
 
+const router = useRouter()
 const { user } = useAuth()
 
-// 响应式数据
-const mainTab = ref('info')
-const activeTab = ref('password')
 const isSubmitting = ref(false)
 
-// API 密钥相关
-const apiKeys = ref<any[]>([])
-const loadingKeys = ref(false)
-const showCreateKeyDialog = ref(false)
-const showNewKeyDialog = ref(false)
-const creatingKey = ref(false)
-const newCreatedKey = ref('')
-const newKeyData = reactive({
-  name: '',
-  permissions: ['upload', 'view']
-})
-
-// API 基础 URL
-const apiBaseUrl = computed(() => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin + '/api'
-  return baseUrl.replace('/api', '/api/v1')
-})
-
-// API 密钥表格列
-const apiKeyColumns = [
-  { colKey: 'name', title: '名称', width: 150 },
-  { colKey: 'api_key', title: '密钥', width: 200 },
-  { colKey: 'permissions', title: '权限', width: 200 },
-  { colKey: 'is_active', title: '状态', width: 80 },
-  { colKey: 'last_used_at', title: '最后使用', width: 150 },
-  { colKey: 'operation', title: '操作', width: 120 }
-]
-
-// 权限文档数据
-const permissionDocs = [
-  { name: 'upload', description: '上传图片权限' },
-  { name: 'view', description: '查看图片列表和详情权限' },
-  { name: 'delete', description: '删除图片权限' },
-  { name: 'manage', description: '管理图片权限（更新信息等）' },
-  { name: 'all', description: '所有权限' }
-]
-const permissionColumns = [
-  { colKey: 'name', title: '权限标识' },
-  { colKey: 'description', title: '说明' }
-]
-
-// 错误码文档数据
-const errorCodeDocs = [
-  { code: 'NO_API_KEY', message: '未提供 API 密钥' },
-  { code: 'INVALID_API_KEY', message: 'API 密钥无效或已被禁用' },
-  { code: 'API_KEY_EXPIRED', message: 'API 密钥已过期' },
-  { code: 'PERMISSION_DENIED', message: '权限不足' },
-  { code: 'NOT_FOUND', message: '资源不存在' },
-  { code: 'FORBIDDEN', message: '无权访问此资源' }
-]
-const errorCodeColumns = [
-  { colKey: 'code', title: '错误码' },
-  { colKey: 'message', title: '说明' }
-]
-
-// 获取权限标签
-const getPermissionLabel = (perm: string) => {
-  const labels: Record<string, string> = {
-    upload: '上传',
-    view: '查看',
-    delete: '删除',
-    manage: '管理',
-    all: '全部'
-  }
-  return labels[perm] || perm
-}
-
-// 获取权限主题色
-const getPermissionTheme = (perm: string) => {
-  const themes: Record<string, string> = {
-    upload: 'primary',
-    view: 'default',
-    delete: 'danger',
-    manage: 'warning',
-    all: 'success'
-  }
-  return themes[perm] || 'default'
-}
-
-// 加载 API 密钥列表
-const loadApiKeys = async () => {
-  loadingKeys.value = true
-  try {
-    const response = await apiService.getApiKeys()
-    if (response.success) {
-      apiKeys.value = response.data || []
-    }
-  } catch (error) {
-    console.error('加载 API 密钥失败:', error)
-  } finally {
-    loadingKeys.value = false
-  }
-}
-
-// 创建 API 密钥
-const createApiKey = async () => {
-  if (!newKeyData.name.trim()) {
-    MessagePlugin.warning('请输入密钥名称')
-    return
-  }
-  if (newKeyData.permissions.length === 0) {
-    MessagePlugin.warning('请至少选择一个权限')
-    return
-  }
-
-  creatingKey.value = true
-  try {
-    const response = await apiService.createApiKey({
-      name: newKeyData.name.trim(),
-      permissions: newKeyData.permissions
-    })
-    
-    if (response.success && response.data) {
-      MessagePlugin.success('API 密钥创建成功')
-      newCreatedKey.value = response.data.api_key
-      showCreateKeyDialog.value = false
-      showNewKeyDialog.value = true
-      
-      // 重置表单
-      newKeyData.name = ''
-      newKeyData.permissions = ['upload', 'view']
-      
-      // 刷新列表
-      await loadApiKeys()
-    } else {
-      MessagePlugin.error(response.message || '创建失败')
-    }
-  } catch (error: any) {
-    MessagePlugin.error(error.message || '创建失败')
-  } finally {
-    creatingKey.value = false
-  }
-}
-
-// 切换密钥状态
-const toggleKeyStatus = async (key: any) => {
-  try {
-    const response = await apiService.toggleApiKey(key.id.toString())
-    if (response.success) {
-      MessagePlugin.success(response.message || '状态已更新')
-      await loadApiKeys()
-    } else {
-      MessagePlugin.error(response.message || '操作失败')
-    }
-  } catch (error: any) {
-    MessagePlugin.error(error.message || '操作失败')
-  }
-}
-
-// 删除密钥
-const deleteKey = async (id: number) => {
-  try {
-    const response = await apiService.deleteApiKey(id.toString())
-    if (response.success) {
-      MessagePlugin.success('密钥已删除')
-      await loadApiKeys()
-    } else {
-      MessagePlugin.error(response.message || '删除失败')
-    }
-  } catch (error: any) {
-    MessagePlugin.error(error.message || '删除失败')
-  }
-}
-
-// 复制密钥
-const copyKey = async (key: string) => {
-  try {
-    await navigator.clipboard.writeText(key)
-    MessagePlugin.success('已复制到剪贴板')
-  } catch (error) {
-    MessagePlugin.error('复制失败')
-  }
-}
-
-// 格式化日期时间
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleString('zh-CN')
-}
-
-// 用户信息
 const userInfo = reactive({
   username: '',
   email: '',
   role: '',
-  createdAt: ''
+  createdAt: '',
+  lastLoginAt: ''
 })
 
+const stats = reactive({
+  imageCount: 0,
+  totalSize: 0,
+  apiKeyCount: 0
+})
 
-// 密码修改表单
 const passwordData = reactive({
   currentPassword: '',
   newPassword: '',
@@ -616,9 +214,7 @@ const passwordData = reactive({
 })
 
 const passwordRules = {
-  currentPassword: [
-    { required: true, message: '请输入当前密码' }
-  ],
+  currentPassword: [{ required: true, message: '请输入当前密码' }],
   newPassword: [
     { required: true, message: '请输入新密码' },
     { min: 6, message: '密码长度至少6位' }
@@ -626,40 +222,49 @@ const passwordRules = {
   confirmPassword: [
     { required: true, message: '请确认新密码' },
     {
-      validator: (val: string) => {
-        return val === passwordData.newPassword
-      },
+      validator: (val: string) => val === passwordData.newPassword,
       message: '两次输入的密码不一致'
     }
   ]
 }
 
-// 个人资料表单
-const profileData = reactive({
-  email: ''
-})
+const profileData = reactive({ email: '' })
 
 const profileRules = {
   email: [
     { required: true, message: '请输入邮箱' },
-    { type: 'email', message: '请输入正确的邮箱格式' }
+    { email: true, message: '请输入正确的邮箱格式' }
   ]
 }
 
-// 方法
 const loadUserInfo = async () => {
   try {
     const response = await apiService.getUserProfile()
     if (response.success && response.data) {
       Object.assign(userInfo, response.data)
-      profileData.email = response.data.email
+      profileData.email = response.data.email || ''
     }
   } catch (error) {
-
-    MessagePlugin.error('加载用户信息失败')
+    console.error('加载用户信息失败:', error)
   }
 }
 
+const loadStats = async () => {
+  try {
+    const [imagesRes, keysRes] = await Promise.all([
+      apiService.getImages({ page: 1, pageSize: 1 }),
+      apiService.getApiKeys()
+    ])
+    if (imagesRes.success && imagesRes.data) {
+      stats.imageCount = imagesRes.data.total || 0
+    }
+    if (keysRes.success && keysRes.data) {
+      stats.apiKeyCount = keysRes.data.length || 0
+    }
+  } catch (error) {
+    console.error('加载统计失败:', error)
+  }
+}
 
 const handlePasswordSubmit = async () => {
   isSubmitting.value = true
@@ -670,7 +275,6 @@ const handlePasswordSubmit = async () => {
     )
     if (response.success) {
       MessagePlugin.success('密码修改成功')
-      // 清空表单
       Object.assign(passwordData, {
         currentPassword: '',
         newPassword: '',
@@ -680,7 +284,6 @@ const handlePasswordSubmit = async () => {
       MessagePlugin.error(response.message || '密码修改失败')
     }
   } catch (error: any) {
-
     MessagePlugin.error(error.message || '密码修改失败')
   } finally {
     isSubmitting.value = false
@@ -690,37 +293,47 @@ const handlePasswordSubmit = async () => {
 const handleProfileSubmit = async () => {
   isSubmitting.value = true
   try {
-    const response = await apiService.updateProfile({
-      email: profileData.email
-    })
+    const response = await apiService.updateProfile({ email: profileData.email })
     if (response.success) {
-      MessagePlugin.success('个人资料更新成功')
+      MessagePlugin.success('邮箱修改成功')
       await loadUserInfo()
     } else {
-      MessagePlugin.error(response.message || '更新失败')
+      MessagePlugin.error(response.message || '修改失败')
     }
   } catch (error: any) {
-
-    MessagePlugin.error(error.message || '更新失败')
+    MessagePlugin.error(error.message || '修改失败')
   } finally {
     isSubmitting.value = false
   }
 }
 
+const goToPage = (path: string) => router.push(path)
+
 const formatDate = (dateString: string) => {
-  if (!dateString) return '-'
+  if (!dateString) return '未知'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return '未知'
+  return new Date(dateString).toLocaleString('zh-CN')
+}
 
-// 生命周期
+const formatSize = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
 onMounted(() => {
   if (user.value) {
     Object.assign(userInfo, user.value)
-    profileData.email = user.value.email
+    profileData.email = user.value.email || ''
   }
   loadUserInfo()
-  loadApiKeys()
+  loadStats()
 })
 </script>
 
@@ -733,14 +346,14 @@ onMounted(() => {
 
 .page-header {
   margin-top: 30px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--td-text-color-primary);
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
 }
 
 .page-description {
@@ -749,181 +362,234 @@ onMounted(() => {
   margin: 0;
 }
 
-.main-tabs {
-  margin-bottom: 24px;
+/* 用户信息条 */
+.user-banner {
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
 }
 
-.profile-content,
-.api-content,
-.docs-content {
-  margin-bottom: 24px;
-}
-
-.profile-card,
-.settings-card,
-.api-card,
-.docs-card {
-  margin-bottom: 24px;
-}
-
-.card-title {
+.user-info {
   display: flex;
   align-items: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--td-text-color-primary);
-  margin: 0;
-}
-
-.card-icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  color: var(--td-brand-color);
-}
-
-.api-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-/* 头像部分 */
-.avatar-section {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.avatar-container {
-  display: inline-block;
-  position: relative;
+  gap: 16px;
 }
 
 .user-avatar {
-  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--td-brand-color), var(--td-brand-color-hover));
+  font-size: 22px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
-.avatar-upload-btn {
-  display: block;
-  margin: 0 auto;
+.user-details {
+  flex: 1;
+  min-width: 0;
 }
 
-/* 信息部分 */
-.info-section {
-  space-y: 16px;
-}
-
-.info-item {
+.user-name-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--td-border-level-1-color);
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-weight: 500;
-  color: var(--td-text-color-secondary);
-  min-width: 80px;
-}
-
-.info-value {
-  color: var(--td-text-color-primary);
-  text-align: right;
-}
-
-/* 表单样式 */
-.form-actions {
-  margin-top: 24px;
-  text-align: right;
-}
-
-.settings-tabs {
-  margin-top: 0;
-}
-
-/* API 文档样式 */
-.docs-section {
-  margin-bottom: 32px;
-}
-
-.docs-section h4 {
-  font-size: 16px;
+.user-name {
+  font-size: 18px;
   font-weight: 600;
   color: var(--td-text-color-primary);
-  margin: 0 0 12px 0;
-  padding-bottom: 8px;
+}
+
+.user-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+
+.meta-divider {
+  color: var(--td-text-color-placeholder);
+}
+
+/* 网格布局 */
+.sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.section-card {
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--td-border-level-1-color);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--td-border-level-1-color);
 }
 
-.docs-section p {
-  margin: 8px 0;
-  color: var(--td-text-color-secondary);
-  line-height: 1.6;
-}
-
-.docs-section code {
-  background: var(--td-bg-color-component);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 13px;
+.section-icon {
+  width: 18px;
+  height: 18px;
   color: var(--td-brand-color);
 }
 
-.docs-section ul {
-  margin: 8px 0;
-  padding-left: 20px;
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
 }
 
-.docs-section li {
-  margin: 4px 0;
+/* 紧凑表单 */
+.compact-form {
+  overflow: hidden;
+}
+
+.compact-form :deep(.t-form__item) {
+  margin-bottom: 16px;
+}
+
+.compact-form :deep(.t-form__label) {
+  font-size: 13px;
+  padding-bottom: 6px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-row :deep(.t-form__item) {
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* 统计卡片 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-box {
+  background: var(--td-bg-color-component);
+  border-radius: 8px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--td-brand-color);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
   color: var(--td-text-color-secondary);
 }
 
-.code-block {
-  background: var(--td-bg-color-component);
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin: 12px 0;
-  overflow-x: auto;
-}
-
-.code-block pre {
-  margin: 0;
-  font-family: 'Monaco', 'Menlo', monospace;
+.last-login {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
-  line-height: 1.5;
+  color: var(--td-text-color-secondary);
+  padding-top: 12px;
+  border-top: 1px solid var(--td-border-level-1-color);
+}
+
+/* 快捷入口 */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.quick-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--td-bg-color-component);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
   color: var(--td-text-color-primary);
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 
-.new-key-display {
-  margin: 16px 0;
+.quick-item:hover {
+  background: var(--td-brand-color-light);
+  color: var(--td-brand-color);
 }
 
-/* 响应式设计 */
+.quick-icon {
+  width: 20px;
+  height: 20px;
+  padding: 4px;
+  border-radius: 6px;
+  color: white;
+}
+
+.quick-icon.upload { background: linear-gradient(135deg, #0052d9, #0077ff); }
+.quick-icon.manage { background: linear-gradient(135deg, #2ba471, #00a870); }
+.quick-icon.api { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+.quick-icon.stats { background: linear-gradient(135deg, #e37318, #ff9500); }
+
+/* 响应式 */
 @media (max-width: 768px) {
-  .info-item {
+  .sections-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .user-meta {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
   
-  .info-value {
-    text-align: left;
-  }
-
-  .api-card-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+  .meta-divider {
+    display: none;
   }
 }
 </style>

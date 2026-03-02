@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // 创建axios实例
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://loaclhost:3001/api'
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
 
 
 const api = axios.create({

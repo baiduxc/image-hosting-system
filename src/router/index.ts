@@ -10,6 +10,7 @@ import Manage from '@/views/Manage.vue'
 import Stats from '@/views/Stats.vue'
 import Settings from '@/views/Settings.vue'
 import Profile from '@/views/Profile.vue'
+import Api from '@/views/Api.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Layout from '@/components/Layout.vue'
@@ -90,6 +91,16 @@ const routes: RouteRecordRaw[] = [
           title: '个人中心',
           requiresAuth: true,
           icon: 'user'
+        }
+      },
+      {
+        path: 'api',
+        name: 'Api',
+        component: Api,
+        meta: { 
+          title: 'API 管理',
+          requiresAuth: true,
+          icon: 'code'
         }
       }
     ]
