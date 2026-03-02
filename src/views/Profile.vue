@@ -252,11 +252,11 @@ const loadUserInfo = async () => {
 const loadStats = async () => {
   try {
     const [imagesRes, keysRes] = await Promise.all([
-      apiService.getImages({ page: 1, pageSize: 1 }),
+      apiService.getImages({ page: 1, limit: 1 }),
       apiService.getApiKeys()
     ])
     if (imagesRes.success && imagesRes.data) {
-      stats.imageCount = imagesRes.data.total || 0
+      stats.imageCount = imagesRes.data.pagination?.total || 0
     }
     if (keysRes.success && keysRes.data) {
       stats.apiKeyCount = keysRes.data.length || 0
