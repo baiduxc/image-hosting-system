@@ -91,7 +91,7 @@
               </t-input>
             </t-form-item>
 
-            <t-form-item name="password" class="form-item-no-label">
+            <t-form-item name="password" class="form-item-no-label password-form-item">
               <t-input
                 v-model="registerData.password"
                 type="password"
@@ -304,45 +304,40 @@ const registerData = reactive({
 // 表单验证规则
 const registerRules = {
   username: [
-    { required: true, message: '请输入用户名', type: 'error' },
-    { min: 3, message: '用户名长度不能少于3位', type: 'error' },
-    { max: 20, message: '用户名长度不能超过20位', type: 'error' },
+    { required: true, message: '请输入用户名' },
+    { min: 3, message: '用户名长度不能少于3位' },
+    { max: 20, message: '用户名长度不能超过20位' },
     { 
       pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, 
-      message: '用户名只能包含字母、数字、下划线和中文', 
-      type: 'error' 
+      message: '用户名只能包含字母、数字、下划线和中文'
     }
   ],
   email: [
-    { required: true, message: '请输入邮箱地址', type: 'error' },
+    { required: true, message: '请输入邮箱地址' },
     { 
       pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, 
-      message: '请输入有效的邮箱地址', 
-      type: 'error' 
+      message: '请输入有效的邮箱地址'
     }
   ],
   password: [
-    { required: true, message: '请输入密码', type: 'error' },
-    { min: 6, message: '密码长度不能少于6位', type: 'error' },
-    { 
-      pattern: /^[a-zA-Z0-9]+$/, 
-      message: '密码只能包含字母和数字', 
-      type: 'error' 
-    }
+    { required: true, message: '请输入密码' },
+    { min: 6, message: '密码长度不能少于6位' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', type: 'error' },
+    { required: true, message: '请确认密码' },
     { 
-      validator: (val: string) => val === registerData.password, 
-      message: '两次输入的密码不一致', 
-      type: 'error' 
+      validator: (val: unknown) => {
+        const pass = typeof val === 'string' && val === registerData.password
+        return pass ? true : { result: false, message: '两次输入的密码不一致' }
+      }
     }
   ],
   agreeTerms: [
     { 
-      validator: (val: boolean) => val === true, 
-      message: '请同意服务条款和隐私政策', 
-      type: 'error' 
+      validator: (val: unknown) => {
+        if (val === true || val === 'true') return true
+        return { result: false, message: '请同意服务条款和隐私政策' }
+      }
     }
   ]
 }
@@ -638,18 +633,26 @@ onMounted(async () => {
   width: 100% !important;
 }
 
-/* 特别处理密码输入框容器 */
-.form-item-no-label:has(.password-strength) :deep(.t-form__controls) {
+/* 密码表单项 - 输入框和强度检测分两行 */
+.password-form-item :deep(.t-form__controls) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   width: 100% !important;
 }
 
-/* 密码强度样式 */
+.password-form-item :deep(.t-input) {
+  width: 100% !important;
+}
+
+/* 密码强度样式 - 独立一行显示在输入框下方 */
 .password-strength {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 8px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .strength-bar {
