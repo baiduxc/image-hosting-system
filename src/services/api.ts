@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // 创建axios实例
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://loaclhost:3001/api'
 
 
 const api = axios.create({
@@ -363,6 +363,8 @@ export const apiService = {
   async testEmailConnection(emailConfig: any): Promise<{
     success: boolean
     message: string
+    hint?: string
+    data?: any
   }> {
     const response = await api.post('/config/test-email', emailConfig)
     return response.data
@@ -730,6 +732,73 @@ export const apiService = {
     const response = await api.get(`/database/migrate/download/${fileName}`, {
       responseType: 'blob'
     })
+    return response.data
+  },
+
+  // ============ API 密钥管理相关 ============
+  
+  // 获取用户的所有 API 密钥
+  async getApiKeys(): Promise<{
+    success: boolean
+    data?: any[]
+    message?: string
+  }> {
+    const response = await api.get('/keys/keys')
+    return response.data
+  },
+
+  // 创建新的 API 密钥
+  async createApiKey(data: {
+    name: string
+    permissions?: string[]
+    expiresAt?: string
+  }): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.post('/keys/keys', data)
+    return response.data
+  },
+
+  // 更新 API 密钥
+  async updateApiKey(id: string, data: {
+    name: string
+    permissions?: string[]
+  }): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.put(`/keys/keys/${id}`, data)
+    return response.data
+  },
+
+  // 切换 API 密钥状态
+  async toggleApiKey(id: string): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.patch(`/keys/keys/${id}/toggle`)
+    return response.data
+  },
+
+  // 删除 API 密钥
+  async deleteApiKey(id: string): Promise<{
+    success: boolean
+    message?: string
+  }> {
+    const response = await api.delete(`/keys/keys/${id}`)
+    return response.data
+  },
+
+  // 获取 API 文档
+  async getApiDocs(): Promise<{
+    success: boolean
+    data?: any
+  }> {
+    const response = await api.get('/v1/docs')
     return response.data
   }
 }

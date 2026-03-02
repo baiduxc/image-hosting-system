@@ -236,8 +236,11 @@
             <t-form-item label="SMTP服务器" name="smtpHost">
               <t-input 
                 v-model="emailConfig.smtpHost" 
-                placeholder="smtp.example.com"
+                placeholder="smtp.gmail.com"
               />
+              <template #help>
+                Gmail: smtp.gmail.com | QQ邮箱: smtp.qq.com | 163邮箱: smtp.163.com
+              </template>
             </t-form-item>
             
             <t-form-item label="SMTP端口" name="smtpPort">
@@ -293,8 +296,12 @@
               <t-input 
                 v-model="emailConfig.smtpPass" 
                 type="password"
-                placeholder="密码或授权码"
+                placeholder="应用专用密码或授权码"
               />
+              <template #help>
+                Gmail需使用"应用专用密码"（非账户密码）：
+                <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #0052d9;">点击获取</a>
+              </template>
             </t-form-item>
 
             <div class="form-actions">
@@ -1122,16 +1129,37 @@ const saveSystemConfig = async () => {
 }
 
 const testEmail = async () => {
+  // 验证必填字段
+  if (!emailConfig.smtpHost || !emailConfig.smtpPort || !emailConfig.fromEmail || 
+      !emailConfig.smtpUser || !emailConfig.smtpPass || !emailConfig.testEmail) {
+    MessagePlugin.warning('请填写完整的邮件配置信息（包括测试邮箱）')
+    return
+  }
+  
   isTesting.value = true
+  console.log('📧 开始测试邮件发送...', emailConfig)
+  
   try {
     const response = await apiService.testEmailConnection(emailConfig)
+    console.log('📧 邮件测试响应:', response)
+    
     if (response.success) {
-      MessagePlugin.success('测试邮件发送成功')
+      MessagePlugin.success('测试邮件发送成功！请检查收件箱（包括垃圾邮件文件夹）')
     } else {
-      MessagePlugin.error('发送失败: ' + response.message)
+      const errorMsg = response.message || '未知错误'
+      const hint = response.hint ? `\n提示: ${response.hint}` : ''
+      MessagePlugin.error({
+        content: `发送失败: ${errorMsg}${hint}`,
+        duration: 8000
+      })
     }
   } catch (error: any) {
-    MessagePlugin.error('发送失败: ' + error.message)
+    console.error('📧 邮件测试错误:', error)
+    const errorMsg = error.response?.data?.message || error.message || '网络请求失败'
+    MessagePlugin.error({
+      content: `发送失败: ${errorMsg}`,
+      duration: 5000
+    })
   } finally {
     isTesting.value = false
   }
@@ -1180,13 +1208,13 @@ const loadStorageList = async () => {
         const isDefaultValue = storage.is_default === true || storage.is_default === 'true' || storage.is_default === 1
         
         const mapped = {
+          ...storage.config,
           id: storage.id.toString(),
           name: storage.name,
           type: storage.type,
           isDefault: isDefaultValue,
-          status: 'connected', // TODO: 实现真实的连接状态检测
-          customDomain: storage.config.customDomain || '',
-          ...storage.config
+          status: 'connected',
+          customDomain: storage.config.customDomain || ''
         }
         
         console.log(`存储 ${storage.name}: 原始值=${storage.is_default} (类型: ${typeof storage.is_default}), 转换后=${mapped.isDefault}`)
