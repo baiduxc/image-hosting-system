@@ -1183,11 +1183,11 @@ const testEmail = async () => {
   }
   
   isTesting.value = true
-  console.log('📧 开始测试邮件发送...', emailConfig)
+ 
   
   try {
     const response = await apiService.testEmailConnection(emailConfig)
-    console.log('📧 邮件测试响应:', response)
+  
     
     if (response.success) {
       MessagePlugin.success('测试邮件发送成功！请检查收件箱（包括垃圾邮件文件夹）')
@@ -1263,7 +1263,6 @@ const loadStorageList = async () => {
           customDomain: storage.config.customDomain || ''
         }
         
-        console.log(`存储 ${storage.name}: 原始值=${storage.is_default} (类型: ${typeof storage.is_default}), 转换后=${mapped.isDefault}`)
         return mapped
       })
 

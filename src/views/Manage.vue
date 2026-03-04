@@ -605,7 +605,7 @@ const getImageUrl = (url: string): string => {
   }
   
   // 如果是相对路径，需要添加API基础URL
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
   const baseUrl = apiBaseUrl.replace('/api', '')
   
   return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`

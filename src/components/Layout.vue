@@ -32,21 +32,29 @@
           </router-link>
         </nav>
 
-        <!-- 用户操作区 -->
+        <!-- 右侧操作区 -->
         <div class="header-right">
-          <!-- 服务状态 -->
-          <div class="server-status">
-            <div :class="['status-dot', serverStatus ? 'status-online' : 'status-offline']"></div>
-            <span class="status-text">{{ serverStatus ? '服务正常' : '服务异常' }}</span>
-          </div>
+          <!-- 存储选择器 -->
+          <t-dropdown 
+            v-if="storageOptions.length > 0"
+            :options="storageDropdownOptions" 
+            @click="handleStorageSelect"
+          >
+            <div class="nav-item">
+              <span class="nav-text">{{ selectedStorageName || '选择存储' }}</span>
+              <ChevronDownIcon class="nav-arrow" />
+            </div>
+          </t-dropdown>
 
           <!-- 用户菜单 -->
-          <t-dropdown :options="userMenuOptions" @click="handleUserMenuClick">
-            <t-button theme="default" variant="text" class="user-menu-trigger">
-              <UserIcon class="user-icon" />
-              <span class="username">{{ user?.username || '用户' }}</span>
-              <ChevronDownIcon class="dropdown-icon" />
-            </t-button>
+          <t-dropdown 
+            :options="userMenuOptions" 
+            @click="handleUserMenuClick"
+          >
+            <div class="nav-item">
+              <span class="nav-text">{{ user?.username || '用户' }}</span>
+              <ChevronDownIcon class="nav-arrow" />
+            </div>
           </t-dropdown>
         </div>
       </div>
@@ -70,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, h } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   ImageIcon,
@@ -78,27 +86,31 @@ import {
   FolderIcon,
   BarChart3Icon,
   SettingsIcon,
-  UserIcon,
   ChevronDownIcon,
   LogOutIcon,
   UserCogIcon,
   CodeIcon
 } from 'lucide-vue-next'
-import { MessagePlugin } from 'tdesign-vue-next'
-import { apiService } from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
 import { useSystemConfig } from '@/composables/useSystemConfig'
+import { useStorage } from '@/composables/useStorage'
 
 const router = useRouter()
 const route = useRoute()
 const { user, logout, isAdmin } = useAuth()
 const { siteName, siteLogo, loadSystemConfig, updatePageTitle, updateFavicon } = useSystemConfig()
+const { 
+  storageOptions,
+  selectedStorageId,
+  selectedStorageName,
+  setSelectedStorageId,
+  loadStorageOptions 
+} = useStorage()
 
 // Logo错误状态
 const logoError = ref(false)
 
 // 响应式数据
-const serverStatus = ref(false)
 const globalLoading = ref(false)
 
 // 导航项配置
@@ -109,10 +121,10 @@ const navItems = computed(() => {
     { name: 'Api', path: '/api', title: 'API', icon: 'code' }
   ]
   
-  // 只有管理员才能看到统计和设置页面
+  // 只有管理员才能看到统计和管理后台入口
   if (isAdmin.value) {
     items.push({ name: 'Stats', path: '/stats', title: '统计', icon: 'chart' })
-    items.push({ name: 'Settings', path: '/settings', title: '设置', icon: 'settings' })
+    items.push({ name: 'Admin', path: '/admin', title: '后台管理', icon: 'settings' })
   }
   
   return items
@@ -135,6 +147,23 @@ const userMenuOptions = computed(() => {
   
   return options
 })
+
+// 存储下拉选项（带选中状态）
+const storageDropdownOptions = computed(() => {
+  return storageOptions.value.map(storage => {
+    const isSelected = storage.id.toString() === selectedStorageId.value
+    return {
+      content: storage.name,
+      value: storage.id.toString(),
+      class: isSelected ? 'storage-option-active' : ''
+    }
+  })
+})
+
+// 处理存储选择
+const handleStorageSelect = (data: any) => {
+  setSelectedStorageId(data.value)
+}
 
 // 获取图标组件
 const getIcon = (iconName: string) => {
@@ -170,23 +199,8 @@ const goToHome = () => {
   router.push('/upload')
 }
 
-// 检查服务器状态
-const checkServerStatus = async () => {
-  try {
-    await apiService.healthCheck()
-    serverStatus.value = true
-  } catch (error) {
-
-    serverStatus.value = false
-  }
-}
-
-let statusCheckInterval: number | null = null
-
 // 组件挂载时执行
 onMounted(async () => {
-  checkServerStatus()
-  
   // 加载系统配置
   await loadSystemConfig()
   
@@ -194,20 +208,8 @@ onMounted(async () => {
   updatePageTitle()
   updateFavicon()
   
-  // 定期检查服务器状态，但只在用户活跃时进行
-  statusCheckInterval = setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      checkServerStatus()
-    }
-  }, 60000) // 改为60秒检查一次，减少频率
-})
-
-// 组件卸载时清除定时器
-onUnmounted(() => {
-  if (statusCheckInterval) {
-    clearInterval(statusCheckInterval)
-    statusCheckInterval = null
-  }
+  // 加载存储选项
+  await loadStorageOptions()
 })
 </script>
 
@@ -240,7 +242,6 @@ onUnmounted(() => {
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
-  
   height: 64px;
   display: flex;
   align-items: center;
@@ -325,61 +326,34 @@ onUnmounted(() => {
   height: 16px;
 }
 
+/* 右侧操作区 */
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
-.server-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
+/* 下拉菜单项样式（和主导航一致） */
+.header-right .nav-item {
+  cursor: pointer;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-online {
-  background-color: var(--td-success-color);
-}
-
-.status-offline {
-  background-color: var(--td-error-color);
-}
-
-.status-text {
-  font-size: 12px;
-}
-
-.user-menu-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-}
-
-.user-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.username {
-  font-size: 14px;
+.nav-text {
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dropdown-icon {
-  width: 14px;
-  height: 14px;
+.nav-arrow {
+  width: 16px;
+  height: 16px;
+}
+
+/* 存储选项选中状态 - 浅蓝色背景 */
+:global(.storage-option-active) {
+  background-color: var(--td-brand-color-light) !important;
+  color: var(--td-brand-color) !important;
 }
 
 .layout-main {
@@ -401,6 +375,10 @@ onUnmounted(() => {
   
   .main-nav {
     display: none;
+  }
+  
+  .action-text {
+    max-width: 60px;
   }
   
   .title {

@@ -165,6 +165,38 @@
         </t-button>
       </template>
     </t-dialog>
+
+    <!-- 邮箱验证提示对话框 -->
+    <t-dialog
+      v-model:visible="emailVerificationVisible"
+      header="邮箱未验证"
+      width="400px"
+      :footer="false"
+      :close-on-overlay-click="false"
+    >
+      <div class="email-verification-content">
+        <div class="verification-icon">
+          <MailIcon class="mail-icon" />
+        </div>
+        <h4 class="verification-title">请先验证您的邮箱</h4>
+        <p class="verification-text">
+          您的邮箱 <strong>{{ unverifiedEmail }}</strong> 尚未验证。
+          请查收验证邮件并点击链接完成验证，或点击下方按钮重新发送验证邮件。
+        </p>
+        <div class="verification-actions">
+          <t-button 
+            theme="primary" 
+            :loading="isResendingVerification"
+            @click="resendVerificationEmail"
+          >
+            重新发送验证邮件
+          </t-button>
+          <t-button @click="emailVerificationVisible = false">
+            稍后再说
+          </t-button>
+        </div>
+      </div>
+    </t-dialog>
   </div>
 </template>
 
@@ -180,6 +212,7 @@ import {
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useSystemConfig } from '@/composables/useSystemConfig'
+import { apiService } from '@/services/api'
 
 const router = useRouter()
 const { login, isLoading } = useAuth()
@@ -220,6 +253,11 @@ const loginRules = {
   ]
 }
 
+// 邮箱验证对话框显示状态
+const emailVerificationVisible = ref(false)
+const unverifiedEmail = ref('')
+const isResendingVerification = ref(false)
+
 // 处理登录
 const handleLogin = async () => {
   try {
@@ -239,8 +277,34 @@ const handleLogin = async () => {
       // 跳转到主页面
       router.push('/')
     }
-  } catch (error) {
+  } catch (error: any) {
+    // 处理邮箱未验证的情况
+    if (error.code === 'EMAIL_NOT_VERIFIED' || error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+      unverifiedEmail.value = error.response?.data?.data?.email || loginData.username
+      emailVerificationVisible.value = true
+    }
+  }
+}
 
+// 重新发送验证邮件
+const resendVerificationEmail = async () => {
+  if (!unverifiedEmail.value) {
+    MessagePlugin.warning('邮箱地址不能为空')
+    return
+  }
+
+  isResendingVerification.value = true
+  try {
+    const result = await apiService.resendVerificationEmail(unverifiedEmail.value)
+    if (result.success) {
+      MessagePlugin.success('验证邮件已发送，请查收')
+    } else {
+      MessagePlugin.warning(result.message || '发送失败')
+    }
+  } catch (error: any) {
+    MessagePlugin.error(error.message || '发送失败')
+  } finally {
+    isResendingVerification.value = false
   }
 }
 
@@ -620,5 +684,56 @@ onMounted(() => {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* 邮箱验证对话框样式 */
+.email-verification-content {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.verification-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #0052d9, #1890ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.verification-icon .mail-icon {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
+.verification-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+  margin: 0 0 12px;
+}
+
+.verification-text {
+  font-size: 14px;
+  color: #4e5969;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.verification-text strong {
+  color: #0052d9;
+}
+
+.verification-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.verification-actions .t-button {
+  width: 100%;
 }
 </style>

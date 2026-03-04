@@ -91,7 +91,7 @@
               </t-input>
             </t-form-item>
 
-            <t-form-item name="password" class="form-item-no-label password-form-item">
+            <t-form-item name="password" class="form-item-no-label">
               <t-input
                 v-model="registerData.password"
                 type="password"
@@ -103,19 +103,21 @@
                   <LockIcon class="input-icon" />
                 </template>
               </t-input>
-              <div class="password-strength">
-                <div class="strength-bar">
-                  <div 
-                    class="strength-fill" 
-                    :class="passwordStrength.level"
-                    :style="{ width: passwordStrength.width }"
-                  ></div>
-                </div>
-                <span class="strength-text" :class="passwordStrength.level">
-                  {{ passwordStrength.text }}
-                </span>
-              </div>
             </t-form-item>
+
+            <!-- 密码强度条 - 独立显示 -->
+            <div class="password-strength-row">
+              <div class="strength-bar">
+                <div 
+                  class="strength-fill" 
+                  :class="passwordStrength.level"
+                  :style="{ width: passwordStrength.width }"
+                ></div>
+              </div>
+              <span class="strength-text" :class="passwordStrength.level">
+                {{ passwordStrength.text }}
+              </span>
+            </div>
 
             <t-form-item name="confirmPassword" class="form-item-no-label">
               <t-input
@@ -395,9 +397,15 @@ const handleRegister = async () => {
   })
 
   if (result.success) {
-    // 暂时直接跳转到登录页面，邮箱验证功能后续开发
-    MessagePlugin.success('注册成功，请登录')
-    router.push('/login')
+    // 检查是否需要邮箱验证
+    if (result.data?.requireEmailVerification) {
+      // 显示邮箱验证对话框
+      verificationVisible.value = true
+    } else {
+      // 直接跳转到登录页面
+      MessagePlugin.success('注册成功，请登录')
+      router.push('/login')
+    }
   }
 }
 
@@ -405,11 +413,14 @@ const handleRegister = async () => {
 const resendVerification = async () => {
   isResending.value = true
   try {
-    // 这里暂时显示提示，实际需要后端支持
-    MessagePlugin.info('邮箱验证功能正在开发中')
+    const result = await apiService.resendVerificationEmail(registerData.email)
+    if (result.success) {
+      MessagePlugin.success('验证邮件已重新发送')
+    } else {
+      MessagePlugin.warning(result.message || '发送失败')
+    }
   } catch (error: any) {
-
-    MessagePlugin.error('发送失败')
+    MessagePlugin.error(error.message || '发送失败')
   } finally {
     isResending.value = false
   }
@@ -633,26 +644,14 @@ onMounted(async () => {
   width: 100% !important;
 }
 
-/* 密码表单项 - 输入框和强度检测分两行 */
-.password-form-item :deep(.t-form__controls) {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  width: 100% !important;
-}
-
-.password-form-item :deep(.t-input) {
-  width: 100% !important;
-}
-
-/* 密码强度样式 - 独立一行显示在输入框下方 */
-.password-strength {
+/* 密码强度条 - 独立一行显示在密码和确认密码之间 */
+.password-strength-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 8px;
+  margin: -4px 0 12px;
+  padding: 0 4px;
   width: 100%;
-  flex-shrink: 0;
 }
 
 .strength-bar {

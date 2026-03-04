@@ -8,11 +8,12 @@
 
     <!-- 主要内容区域 -->
     <div class="main-content">
-      <!-- 拖拽上传区域 -->
+      <!-- 上传区域卡片 -->
       <t-card class="upload-card">
+        <!-- 拖拽上传区域 -->
         <div 
           class="upload-area"
-          :class="{ 'drag-over': isDragOver }"
+          :class="{ 'drag-over': isDragOver, 'has-files': uploadFiles.length > 0 }"
           @drop="handleDrop"
           @dragover="handleDragOver"
           @dragenter="handleDragEnter"
@@ -30,10 +31,102 @@
               class="hidden"
               @change="handleFileSelect"
             />
-            <div class="upload-actions">
-              <t-button theme="primary" size="large" @click="fileInput?.click()">
-                选择文件
+            <t-button theme="primary" size="large" @click="fileInput?.click()">
+              选择文件
+            </t-button>
+          </div>
+        </div>
+
+        <!-- 上传队列区域（紧凑列表） -->
+        <div v-if="uploadFiles.length > 0" class="upload-queue">
+          <!-- 列表头部工具栏 -->
+          <div class="queue-toolbar">
+            <div class="toolbar-left">
+              <span class="queue-count">{{ uploadFiles.length }} 个文件</span>
+              <span v-if="uploadStats.success > 0" class="status-badge success">
+                <CheckCircleIcon class="badge-icon" />{{ uploadStats.success }}
+              </span>
+              <span v-if="uploadStats.error > 0" class="status-badge error">
+                <XCircleIcon class="badge-icon" />{{ uploadStats.error }}
+              </span>
+              <span v-if="uploadStats.pending > 0" class="status-badge pending">
+                <ClockIcon class="badge-icon" />{{ uploadStats.pending }}
+              </span>
+            </div>
+            <div class="toolbar-right">
+              <t-button 
+                theme="primary" 
+                size="small"
+                :loading="isUploading"
+                :disabled="uploadStats.pending === 0 || !selectedStorageId"
+                @click="handleUpload"
+              >
+                {{ isUploading ? '上传中...' : '开始上传' }}
               </t-button>
+              <t-button variant="outline" size="small" @click="clearFiles">
+                清空
+              </t-button>
+            </div>
+          </div>
+
+          <!-- 紧凑文件列表 -->
+          <div class="file-list">
+            <div 
+              v-for="file in uploadFiles" 
+              :key="file.id"
+              class="file-item"
+              :class="file.status"
+            >
+              <!-- 缩略图 -->
+              <div class="file-thumb">
+                <img v-if="file.preview" :src="file.preview" alt="" />
+                <div v-else class="thumb-placeholder">
+                  <ImageIcon class="placeholder-icon" />
+                </div>
+                <!-- 状态覆盖层 -->
+                <div v-if="file.status === 'uploading'" class="thumb-overlay">
+                  <span class="progress-text">{{ file.progress }}%</span>
+                </div>
+                <div v-else-if="file.status === 'success'" class="thumb-overlay success">
+                  <CheckCircleIcon class="overlay-icon" />
+                </div>
+                <div v-else-if="file.status === 'error'" class="thumb-overlay error">
+                  <XCircleIcon class="overlay-icon" />
+                </div>
+              </div>
+
+              <!-- 文件信息 -->
+              <div class="file-meta">
+                <p class="file-name" :title="file.file.name">{{ file.file.name }}</p>
+                <p class="file-size">{{ formatFileSize(file.file.size) }}</p>
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="file-ops">
+                <t-button 
+                  v-if="file.status === 'success' && file.url"
+                  size="small"
+                  variant="text"
+                  @click="copyToClipboard(file.url!)"
+                >
+                  <CopyIcon class="op-icon" />
+                </t-button>
+                <t-button 
+                  v-if="file.status === 'error'"
+                  size="small"
+                  variant="text"
+                  @click="retryUpload(file.id)"
+                >
+                  <RefreshCwIcon class="op-icon" />
+                </t-button>
+                <t-button 
+                  size="small"
+                  variant="text"
+                  @click="removeFile(file.id)"
+                >
+                  <XIcon class="op-icon" />
+                </t-button>
+              </div>
             </div>
           </div>
         </div>
@@ -48,278 +141,84 @@
         <div class="transfer-content">
           <t-textarea
             v-model="urlList"
-            placeholder="请输入图片URL，每行一个链接（最多20个）&#10;例如：&#10;https://example.com/image1.jpg&#10;https://example.com/image2.png"
-            :rows="4"
+            placeholder="请输入图片URL，每行一个链接（最多20个）&#10;例如：&#10;https://example.com/image1.jpg"
+            :rows="3"
             class="url-input"
           />
           
-          <div class="transfer-actions">
-            <span class="transfer-desc">支持批量转存，自动绕过防盗链</span>
-            <div class="action-buttons">
+          <div class="transfer-toolbar">
+            <span class="transfer-hint">支持批量转存，自动绕过防盗链</span>
+            <div class="transfer-actions">
               <t-button 
                 variant="outline"
+                size="small"
                 :loading="validating"
                 :disabled="!urlList.trim()"
                 @click="validateUrls"
               >
-                {{ validating ? '验证中...' : '验证URL' }}
+                验证
               </t-button>
               <t-button 
                 theme="primary"
+                size="small"
                 :loading="isTransferring"
                 :disabled="!urlList.trim()"
                 @click="handleTransfer"
               >
-                {{ isTransferring ? '转存中...' : '开始转存' }}
+                转存
               </t-button>
+            </div>
+          </div>
+
+          <!-- 验证/转存结果（紧凑列表） -->
+          <div v-if="validationResults.length > 0 || transferProgress.length > 0" class="result-list">
+            <div 
+              v-for="(item, index) in (transferProgress.length > 0 ? transferProgress : validationResults)" 
+              :key="index"
+              class="result-item"
+              :class="getResultClass(item)"
+            >
+              <div class="result-icon">
+                <CheckCircleIcon v-if="isSuccess(item)" class="icon-success" />
+                <XCircleIcon v-else-if="isError(item)" class="icon-error" />
+                <div v-else class="loading-dot"></div>
+              </div>
+              <div class="result-info">
+                <p class="result-url">{{ item.url || item.originalUrl }}</p>
+                <p v-if="item.newUrl" class="result-new">{{ item.newUrl }}</p>
+                <p v-else-if="item.error || item.message" class="result-msg">{{ item.error || item.message }}</p>
+              </div>
               <t-button 
-                variant="outline"
-                @click="clearTransferData"
-                :disabled="!urlList.trim() && validationResults.length === 0 && transferProgress.length === 0"
+                v-if="item.newUrl"
+                size="small"
+                variant="text"
+                @click="copyToClipboard(item.newUrl)"
               >
-                清空
+                <CopyIcon class="op-icon" />
               </t-button>
-            </div>
-          </div>
-
-          <!-- URL验证结果 -->
-          <div v-if="validationResults.length > 0" class="validation-results">
-            <h4 class="results-title">URL验证结果</h4>
-            <div class="results-list">
-              <div 
-                v-for="(result, index) in validationResults" 
-                :key="index"
-                class="result-item"
-                :class="{ 'valid': result.valid, 'invalid': !result.valid }"
-              >
-                <div class="result-status">
-                  <CheckCircleIcon v-if="result.valid" class="status-icon success" />
-                  <XCircleIcon v-else class="status-icon error" />
-                </div>
-                <div class="result-details">
-                  <p class="result-url">{{ result.url }}</p>
-                  <div class="result-meta">
-                    <span v-if="result.contentType" class="meta-item">{{ result.contentType }}</span>
-                    <span v-if="result.contentLength" class="meta-item">{{ formatFileSize(result.contentLength) }}</span>
-                    <span v-if="result.error" class="meta-item error">{{ result.error }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 转存进度 -->
-          <div v-if="transferProgress.length > 0" class="transfer-progress">
-            <h4 class="progress-title">转存进度</h4>
-            <div class="progress-list">
-              <div 
-                v-for="(progress, index) in transferProgress" 
-                :key="index"
-                class="progress-item"
-              >
-                <div class="progress-status">
-                  <div v-if="progress.status === 'processing'" class="loading-spinner"></div>
-                  <CheckCircleIcon v-else-if="progress.status === 'success'" class="status-icon success" />
-                  <XCircleIcon v-else-if="progress.status === 'error'" class="status-icon error" />
-                </div>
-                <div class="progress-details">
-                  <p class="progress-url">{{ progress.originalUrl }}</p>
-                  <p class="progress-message" :class="progress.status">{{ progress.message }}</p>
-                  <!-- 转存成功时显示新链接 -->
-                  <p v-if="progress.status === 'success' && progress.newUrl" class="progress-new-url">
-                    {{ progress.newUrl }}
-                  </p>
-                </div>
-                <!-- 转存成功时显示复制按钮 -->
-                <div v-if="progress.status === 'success' && progress.newUrl" class="progress-actions">
-                  <t-button size="small" variant="outline" @click="copyToClipboard(progress.newUrl)">
-                    复制链接
-                  </t-button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </t-card>
     </div>
-
-    <!-- 上传队列抽屉 -->
-    <t-drawer
-      v-model:visible="uploadDrawerVisible"
-      title="上传管理"
-      placement="right"
-      :size="drawerSize"
-      :show-overlay="true"
-      :close-on-overlay-click="true"
-      :footer="true"
-    >
-      <!-- 存储选择 -->
-      <div class="drawer-section">
-        <h4 class="section-title">存储配置</h4>
-        <div class="storage-selector">
-          <t-select 
-            v-model="selectedStorageId" 
-            :options="storageOptions"
-            placeholder="选择存储方式"
-            class="storage-select"
-          />
-          <span v-if="storageOptions.length === 1" class="storage-hint">
-            当前只有一个存储配置
-          </span>
-        </div>
-      </div>
-
-      <!-- 上传队列 -->
-      <div v-if="uploadFiles.length > 0" class="drawer-section">
-        <div class="section-header">
-          <h4 class="section-title">上传队列 ({{ uploadFiles.length }})</h4>
-          <div class="section-actions">
-            <t-button 
-              theme="primary" 
-              size="small"
-              :loading="isUploading"
-              :disabled="uploadFiles.filter(f => f.status === 'pending').length === 0 || !selectedStorageId"
-              @click="upload(selectedStorageId)"
-            >
-              {{ isUploading ? '上传中...' : '开始上传' }}
-            </t-button>
-            <t-button variant="outline" size="small" @click="clearFiles">
-              清空列表
-            </t-button>
-          </div>
-        </div>
-
-        <!-- 文件列表 -->
-        <div class="drawer-file-list">
-          <div 
-            v-for="file in uploadFiles" 
-            :key="file.id"
-            class="drawer-file-item"
-          >
-            <div class="file-info">
-              <div class="file-icon">
-                <ImageIcon />
-              </div>
-              <div class="file-details">
-                <p class="file-name">{{ file.file.name }}</p>
-                <p class="file-size">{{ formatFileSize(file.file.size) }}</p>
-              </div>
-            </div>
-
-            <!-- 状态和进度 -->
-            <div class="file-status">
-              <div class="progress-area">
-                <div v-if="file.status === 'uploading'" class="progress-bar">
-                  <t-progress 
-                    :percentage="file.progress" 
-                    size="small"
-                    :show-info="false"
-                  />
-                </div>
-                <div v-else-if="file.status === 'success'" class="status-success">
-                  <CheckCircleIcon class="status-icon" />
-                  <span>上传成功</span>
-                </div>
-                <div v-else-if="file.status === 'error'" class="status-error">
-                  <XCircleIcon class="status-icon" />
-                  <span>{{ file.error || '上传失败' }}</span>
-                </div>
-                <div v-else class="status-pending">
-                  <ClockIcon class="status-icon" />
-                  <span>等待上传</span>
-                </div>
-              </div>
-
-              <!-- 操作按钮 -->
-              <div class="file-actions">
-                <t-button 
-                  v-if="file.status === 'success' && file.url"
-                  size="small"
-                  variant="outline"
-                  @click="copyToClipboard(file.url!)"
-                >
-                  复制链接
-                </t-button>
-                <t-button 
-                  v-if="file.status === 'error'"
-                  size="small"
-                  theme="primary"
-                  @click="retryUpload(file.id)"
-                >
-                  重试
-                </t-button>
-                <t-button 
-                  size="small"
-                  variant="outline"
-                  @click="removeFile(file.id)"
-                >
-                  移除
-                </t-button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 上传统计 -->
-        <div v-if="uploadFiles.length > 0" class="upload-stats">
-          <div class="stats-item">
-            <span class="stats-label">总计:</span>
-            <span class="stats-value">{{ uploadStats.total }} 个文件</span>
-          </div>
-          <div class="stats-item">
-            <span class="stats-label">成功:</span>
-            <span class="stats-value success">{{ uploadStats.success }}</span>
-          </div>
-          <div class="stats-item">
-            <span class="stats-label">失败:</span>
-            <span class="stats-value error">{{ uploadStats.error }}</span>
-          </div>
-          <div class="stats-item">
-            <span class="stats-label">等待:</span>
-            <span class="stats-value pending">{{ uploadStats.pending }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-else class="drawer-empty">
-        <div class="empty-content">
-          <ImageIcon class="empty-icon" />
-          <p class="empty-text">暂无上传文件</p>
-          <p class="empty-desc">选择文件或拖拽到上传区域开始上传</p>
-        </div>
-      </div>
-      
-      <!-- 抽屉底部按钮 -->
-      <template #footer>
-        <div class="drawer-footer">
-          <t-button theme="primary" size="large" block @click="handleDrawerComplete">
-            完成
-          </t-button>
-        </div>
-      </template>
-    </t-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { 
   UploadIcon,
-  FolderOpenIcon,
   ImageIcon,
-  TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
   CopyIcon,
   RefreshCwIcon,
-  XIcon,
-  CheckIcon,
-  DownloadIcon
+  XIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useUpload } from '@/composables/useUpload'
+import { useStorage } from '@/composables/useStorage'
 import { apiService } from '@/services/api'
 
 // 使用上传组合式函数
@@ -334,80 +233,36 @@ const {
   getUploadStats
 } = useUpload()
 
+// 使用存储组合式函数
+const { selectedStorageId, loadStorageOptions } = useStorage()
+
 // 响应式数据
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 const urlList = ref('')
 const isTransferring = ref(false)
 const validating = ref(false)
-const transferResults = ref<any[]>([])
 const validationResults = ref<any[]>([])
 const transferProgress = ref<any[]>([])
-
-// 存储选择相关
-const selectedStorageId = ref('')
-const storageOptions = ref<Array<{label: string, value: string}>>([])
-
-// 抽屉相关
-const uploadDrawerVisible = ref(false)
-const drawerSize = computed(() => {
-  // 响应式抽屉宽度
-  if (typeof window !== 'undefined') {
-    return window.innerWidth <= 768 ? '100%' : '480px'
-  }
-  return '480px'
-})
-
-// 显示上传抽屉
-const showUploadDrawer = () => {
-  uploadDrawerVisible.value = true
-}
-
-// 处理抽屉完成
-const handleDrawerComplete = () => {
-  uploadDrawerVisible.value = false
-  clearFiles()
-  MessagePlugin.success('上传队列已清空')
-}
-
-// 加载存储选项
-const loadStorageOptions = async () => {
-  try {
-    const response = await apiService.getAvailableStorages()
-    if (response.success && response.data) {
-      storageOptions.value = response.data.map(storage => ({
-        label: `${storage.name}${storage.isDefault ? ' (默认)' : ''}`,
-        value: storage.id.toString()
-      }))
-      
-      // 优先选择默认存储，如果没有则从localStorage获取用户上次选择的存储
-      const defaultStorage = response.data.find(storage => storage.isDefault)
-      if (defaultStorage) {
-        selectedStorageId.value = defaultStorage.id.toString()
-      } else {
-        const lastSelectedStorage = localStorage.getItem('selectedStorageId')
-        if (lastSelectedStorage && storageOptions.value.find(opt => opt.value === lastSelectedStorage)) {
-          selectedStorageId.value = lastSelectedStorage
-        } else if (storageOptions.value.length > 0) {
-          selectedStorageId.value = storageOptions.value[0].value
-        }
-      }
-    }
-  } catch (error) {
-    console.error('加载存储配置失败:', error)
-    MessagePlugin.error('加载存储配置失败，请联系管理员')
-  }
-}
 
 // 计算属性
 const uploadStats = computed(() => getUploadStats())
 
-// 监听存储选择变化，自动保存到localStorage
-watch(selectedStorageId, (newValue) => {
-  if (newValue) {
-    localStorage.setItem('selectedStorageId', newValue)
-  }
-})
+// 结果状态判断
+const getResultClass = (item: any) => {
+  if (item.status === 'success' || item.valid === true) return 'success'
+  if (item.status === 'error' || item.valid === false) return 'error'
+  if (item.status === 'processing') return 'processing'
+  return ''
+}
+
+const isSuccess = (item: any) => {
+  return item.status === 'success' || item.valid === true
+}
+
+const isError = (item: any) => {
+  return item.status === 'error' || item.valid === false
+}
 
 // 拖拽处理
 const handleDragOver = (e: DragEvent) => {
@@ -433,10 +288,7 @@ const handleDrop = (e: DragEvent) => {
   const imageFiles = files.filter(file => file.type.startsWith('image/'))
   
   if (imageFiles.length > 0) {
-    addFiles(imageFiles)
-    MessagePlugin.success(`已添加 ${imageFiles.length} 个文件到上传队列`)
-    // 拖拽文件后自动打开抽屉
-    uploadDrawerVisible.value = true
+    addFilesWithPreview(imageFiles)
   } else {
     MessagePlugin.error('请拖拽图片文件')
   }
@@ -448,127 +300,99 @@ const handleFileSelect = (e: Event) => {
   const files = Array.from(target.files || [])
   
   if (files.length > 0) {
-    addFiles(files)
-    MessagePlugin.success(`已添加 ${files.length} 个文件到上传队列`)
-    // 选择文件后自动打开抽屉
-    uploadDrawerVisible.value = true
+    addFilesWithPreview(files)
   }
   
-  // 清空input值，允许重复选择同一文件
   target.value = ''
 }
 
-// 清空转存相关数据
-const clearTransferData = () => {
-  urlList.value = ''
-  validationResults.value = []
-  transferProgress.value = []
-  transferResults.value = []
+// 添加文件并生成预览
+const addFilesWithPreview = (files: File[]) => {
+  addFiles(files)
+  
+  // 为每个文件生成预览
+  files.forEach((file, index) => {
+    const fileIndex = uploadFiles.value.length - files.length + index
+    if (fileIndex >= 0 && file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (uploadFiles.value[fileIndex]) {
+          uploadFiles.value[fileIndex].preview = e.target?.result as string
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  })
+  
+  MessagePlugin.success(`已添加 ${files.length} 个文件`)
 }
 
-// URL验证处理
-const validateUrls = async () => {
-  const urls = urlList.value.split('\n').filter(url => url.trim())
-  
-  if (urls.length === 0) {
-    MessagePlugin.error('请输入有效的图片URL')
+// 处理上传
+const handleUpload = () => {
+  if (!selectedStorageId.value) {
+    MessagePlugin.error('请先选择存储位置')
     return
   }
+  upload(selectedStorageId.value)
+}
 
+// URL验证
+const validateUrls = async () => {
+  const urls = urlList.value.split('\n').filter(url => url.trim())
+  if (urls.length === 0) return
   if (urls.length > 20) {
-    MessagePlugin.error('最多支持20个URL同时验证')
+    MessagePlugin.error('最多20个URL')
     return
   }
 
   validating.value = true
-  validationResults.value = []
+  validationResults.value = urls.map(url => ({ url, valid: null }))
 
   try {
     const response = await apiService.validateUrls(urls)
-    if (response.success && response.data) {
-      validationResults.value = response.data
-      const validCount = response.data.filter(r => r.valid).length
-      MessagePlugin.success(`验证完成，有效 ${validCount}/${urls.length} 个URL`)
-    } else {
-      MessagePlugin.error('验证失败: ' + response.message)
+    if (response.success) {
+      validationResults.value = response.data || []
     }
   } catch (error: any) {
-
     MessagePlugin.error('验证失败: ' + error.message)
   } finally {
     validating.value = false
   }
 }
 
-// URL转存处理
+// URL转存
 const handleTransfer = async () => {
   const urls = urlList.value.split('\n').filter(url => url.trim())
-  
-  if (urls.length === 0) {
-    MessagePlugin.error('请输入有效的图片URL')
-    return
-  }
-
+  if (urls.length === 0) return
   if (urls.length > 20) {
-    MessagePlugin.error('最多支持20个URL同时转存')
+    MessagePlugin.error('最多20个URL')
     return
   }
 
   isTransferring.value = true
-  transferResults.value = []
-  transferProgress.value = urls.map(url => ({
-    originalUrl: url,
-    status: 'processing',
-    message: '准备转存...'
-  }))
+  transferProgress.value = urls.map(url => ({ originalUrl: url, status: 'processing' }))
 
   try {
     const response = await apiService.transferImages(urls)
-    if (response.success && response.data) {
-      transferResults.value = response.data
-      transferProgress.value = response.data.map(result => ({
-        originalUrl: result.originalUrl,
-        newUrl: result.newUrl,
-        status: result.success ? 'success' : 'error',
-        message: result.message
-      }))
-      const successCount = response.data.filter(r => r.success).length
-      MessagePlugin.success(`转存完成，成功 ${successCount}/${urls.length} 个`)
-    } else {
-      MessagePlugin.error('转存失败: ' + response.message)
-      transferProgress.value = urls.map(url => ({
-        originalUrl: url,
-        status: 'error',
-        message: response.message
-      }))
+    if (response.success) {
+      transferProgress.value = response.data || []
     }
   } catch (error: any) {
-
     MessagePlugin.error('转存失败: ' + error.message)
-    transferProgress.value = urls.map(url => ({
-      originalUrl: url,
-      status: 'error',
-      message: error.message
-    }))
   } finally {
     isTransferring.value = false
   }
 }
 
-// 复制到剪贴板
+// 复制
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
-    MessagePlugin.success('链接已复制到剪贴板')
+    MessagePlugin.success('已复制')
   } catch (error) {
     MessagePlugin.error('复制失败')
   }
 }
-
-// 生命周期
-onMounted(() => {
-  loadStorageOptions()
-})
 
 // 格式化文件大小
 const formatFileSize = (bytes: number): string => {
@@ -576,8 +400,12 @@ const formatFileSize = (bytes: number): string => {
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
+
+onMounted(() => {
+  loadStorageOptions()
+})
 </script>
 
 <style scoped>
@@ -592,51 +420,29 @@ const formatFileSize = (bytes: number): string => {
   margin-bottom: 24px;
 }
 
-.storage-selector-card {
-  margin-bottom: 16px;
-}
-
-.storage-selector {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.storage-label {
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-  white-space: nowrap;
-}
-
-.storage-select {
-  min-width: 200px;
-}
-
-.storage-hint {
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
-  margin-left: 8px;
-}
-
 .page-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--td-text-color-primary);
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
 }
 
 .page-description {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--td-text-color-secondary);
   margin: 0;
 }
 
-.upload-card,
-.upload-list-card,
-.transfer-card {
-  margin-bottom: 24px;
+.main-content {
+  padding: 0 24px 24px;
 }
 
+.upload-card,
+.transfer-card {
+  margin-bottom: 16px;
+}
+
+/* 上传区域 */
 .upload-area {
   border: 2px dashed var(--td-border-level-1-color);
   border-radius: 12px;
@@ -652,28 +458,34 @@ const formatFileSize = (bytes: number): string => {
   background-color: var(--td-brand-color-light);
 }
 
+.upload-area.has-files {
+  padding: 24px;
+  border-style: solid;
+  border-color: var(--td-border-level-2-color);
+}
+
 .upload-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .upload-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   color: var(--td-text-color-placeholder);
 }
 
 .upload-title {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--td-text-color-primary);
   margin: 0;
 }
 
 .upload-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--td-text-color-secondary);
   margin: 0;
 }
@@ -682,170 +494,188 @@ const formatFileSize = (bytes: number): string => {
   display: none;
 }
 
-.list-header {
+/* 上传队列 - 紧凑设计 */
+.upload-queue {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--td-border-level-1-color);
+}
+
+.queue-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  margin-bottom: 12px;
 }
 
-.list-actions {
+.toolbar-left {
   display: flex;
-  gap: 12px;
-  margin-left: auto;
+  align-items: center;
+  gap: 8px;
 }
 
-.list-title {
-  font-size: 18px;
+.queue-count {
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 500;
-  color: var(--td-text-color-primary);
-  margin: 0;
 }
 
-.list-actions {
+.status-badge.success {
+  background: var(--td-success-color-light);
+  color: var(--td-success-color);
+}
+
+.status-badge.error {
+  background: var(--td-error-color-light);
+  color: var(--td-error-color);
+}
+
+.status-badge.pending {
+  background: var(--td-warning-color-light);
+  color: var(--td-warning-color);
+}
+
+.badge-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.toolbar-right {
   display: flex;
   gap: 8px;
 }
 
+/* 文件列表 - 网格布局 */
 .file-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
 .file-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border: 1px solid var(--td-border-level-1-color);
+  gap: 10px;
+  padding: 8px;
+  background: var(--td-bg-color-secondarycontainer);
   border-radius: 8px;
-  background-color: var(--td-bg-color-container);
+  transition: all 0.2s;
 }
 
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
+.file-item:hover {
+  background: var(--td-bg-color-container-hover);
 }
 
-.file-icon {
-  width: 40px;
-  height: 40px;
-  background-color: var(--td-bg-color-component);
+/* 缩略图 */
+.file-thumb {
+  position: relative;
+  width: 48px;
+  height: 48px;
   border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--td-bg-color-container);
+}
+
+.file-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.placeholder-icon {
+  width: 20px;
+  height: 20px;
   color: var(--td-text-color-placeholder);
 }
 
-.file-details {
+.thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.thumb-overlay.success {
+  background: rgba(0, 168, 112, 0.8);
+}
+
+.thumb-overlay.error {
+  background: rgba(217, 48, 56, 0.8);
+}
+
+.progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+.overlay-icon {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+/* 文件信息 */
+.file-meta {
   flex: 1;
   min-width: 0;
 }
 
 .file-name {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
   color: var(--td-text-color-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .file-size {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--td-text-color-placeholder);
-  margin: 0;
+  margin: 2px 0 0 0;
 }
 
-.file-status {
+/* 操作按钮 */
+.file-ops {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.progress-area {
-  width: 200px;
+.file-item:hover .file-ops {
+  opacity: 1;
 }
 
-.progress-bar {
-  width: 100%;
-}
-
-.status-success,
-.status-error,
-.status-pending {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-}
-
-.status-success {
-  color: var(--td-success-color);
-}
-
-.status-error {
-  color: var(--td-error-color);
-}
-
-.status-pending {
-  color: var(--td-text-color-placeholder);
-}
-
-.status-icon {
+.op-icon {
   width: 14px;
   height: 14px;
 }
 
-.file-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.upload-stats {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0 0 0;
-  border-top: 1px solid var(--td-border-level-1-color);
-  margin-top: 16px;
-  font-size: 14px;
-}
-
-.stats-item {
-  display: flex;
-  gap: 4px;
-}
-
-.stats-label {
-  color: var(--td-text-color-secondary);
-}
-
-.stats-value {
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-}
-
-.stats-value.success {
-  color: var(--td-success-color);
-}
-
-.stats-value.error {
-  color: var(--td-error-color);
-}
-
-.stats-value.pending {
-  color: var(--td-warning-color);
-}
-
+/* 转存卡片 */
 .card-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--td-text-color-primary);
   margin: 0;
@@ -854,393 +684,138 @@ const formatFileSize = (bytes: number): string => {
 .transfer-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.url-input {
-  width: 100%;
+.transfer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transfer-hint {
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
 }
 
 .transfer-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.transfer-desc {
-  font-size: 14px;
-  color: var(--td-text-color-secondary);
-}
-
-.action-buttons {
-  display: flex;
   gap: 8px;
 }
 
-.validation-results,
-.transfer-progress,
-.transfer-results {
-  border-top: 1px solid var(--td-border-level-1-color);
-  padding-top: 16px;
-}
-
-.results-title,
-.progress-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-  margin: 0 0 12px 0;
-}
-
-.results-list,
-.progress-list {
+/* 结果列表 */
+.result-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.result-item,
-.progress-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid var(--td-border-level-1-color);
-}
-
-.progress-item:has(.progress-actions) {
-  align-items: flex-start;
-}
-
-.result-item.valid {
-  background-color: var(--td-success-color-light);
-  border-color: var(--td-success-color);
-}
-
-.result-item.invalid {
-  background-color: var(--td-error-color-light);
-  border-color: var(--td-error-color);
-}
-
-.result-status,
-.progress-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-}
-
-.result-details,
-.progress-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.result-url,
-.progress-url {
-  font-size: 14px;
-  color: var(--td-text-color-primary);
-  margin: 0 0 4px 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.result-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-}
-
-.meta-item {
-  color: var(--td-text-color-secondary);
-}
-
-.meta-item.error {
-  color: var(--td-error-color);
-}
-
-.result-message,
-.progress-message {
-  font-size: 12px;
-  margin: 0;
-}
-
-.result-message.success,
-.progress-message.success {
-  color: var(--td-success-color);
-}
-
-.result-message.error,
-.progress-message.error {
-  color: var(--td-error-color);
-}
-
-.progress-message.processing {
-  color: var(--td-brand-color);
-}
-
-.progress-new-url {
-  font-size: 12px;
-  color: var(--td-success-color);
-  margin: 4px 0 0 0;
-  font-weight: 500;
-  word-break: break-all;
-}
-
-.progress-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.result-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.loading-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--td-brand-color-light);
-  border-top: 2px solid var(--td-brand-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 抽屉样式 */
-.drawer-section {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-  margin: 0 0 12px 0;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.storage-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.storage-select {
-  width: 100%;
-}
-
-.storage-hint {
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
-}
-
-.drawer-file-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 400px;
+  gap: 6px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
-.drawer-file-item {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--td-border-level-1-color);
-  border-radius: 8px;
-  background-color: var(--td-bg-color-container);
-}
-
-.file-info {
+.result-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--td-bg-color-secondarycontainer);
+  border-radius: 6px;
+  border-left: 2px solid transparent;
 }
 
-.file-icon {
-  width: 32px;
-  height: 32px;
-  background-color: var(--td-bg-color-component);
-  border-radius: 6px;
+.result-item.success {
+  border-left-color: var(--td-success-color);
+}
+
+.result-item.error {
+  border-left-color: var(--td-error-color);
+}
+
+.result-item.processing {
+  border-left-color: var(--td-brand-color);
+}
+
+.result-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--td-text-color-placeholder);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
-.file-details {
+.icon-success {
+  color: var(--td-success-color);
+}
+
+.icon-error {
+  color: var(--td-error-color);
+}
+
+.loading-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--td-brand-color);
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.result-info {
   flex: 1;
   min-width: 0;
 }
 
-.file-name {
-  font-size: 14px;
-  font-weight: 500;
+.result-url {
+  font-size: 12px;
   color: var(--td-text-color-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.file-size {
-  font-size: 12px;
-  color: var(--td-text-color-placeholder);
-  margin: 0;
-}
-
-.file-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.progress-area {
-  flex: 1;
-}
-
-.file-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.upload-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 16px;
-  background-color: var(--td-bg-color-secondarycontainer);
-  border-radius: 8px;
-  margin-top: 16px;
-}
-
-.stats-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stats-label {
-  font-size: 12px;
-  color: var(--td-text-color-secondary);
-}
-
-.stats-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--td-text-color-primary);
-}
-
-.stats-value.success {
+.result-new {
+  font-size: 11px;
   color: var(--td-success-color);
+  margin: 2px 0 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stats-value.error {
+.result-msg {
+  font-size: 11px;
   color: var(--td-error-color);
+  margin: 2px 0 0 0;
 }
 
-.stats-value.pending {
-  color: var(--td-warning-color);
-}
-
-.drawer-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-}
-
-.empty-content {
-  text-align: center;
-}
-
-.empty-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--td-text-color-placeholder);
-  margin: 0 auto 16px;
-}
-
-.empty-text {
-  font-size: 16px;
-  color: var(--td-text-color-secondary);
-  margin: 0 0 8px 0;
-}
-
-.empty-desc {
-  font-size: 14px;
-  color: var(--td-text-color-placeholder);
-  margin: 0;
-}
-
-/* 抽屉底部按钮样式 */
-.drawer-footer {
-  padding: 16px;
-  border-top: 1px solid var(--td-border-level-1-color);
-  background-color: var(--td-bg-color-container);
-}
-
-/* 响应式设计 */
+/* 响应式 */
 @media (max-width: 768px) {
-  .upload-area {
-    padding: 32px 16px;
+  .main-content {
+    padding: 0 16px 16px;
   }
-  
-  .upload-actions {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .transfer-actions {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .drawer-file-item {
-    padding: 12px;
-  }
-  
-  .file-status {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  
-  .file-actions {
-    justify-content: center;
-  }
-  
-  .upload-stats {
+
+  .file-list {
     grid-template-columns: 1fr;
+  }
+
+  .file-ops {
+    opacity: 1;
+  }
+
+  .queue-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .transfer-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
   }
 }
 </style>

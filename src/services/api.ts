@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // 创建axios实例
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+const baseURL = import.meta.env.VITE_API_BASE_URL
 
 
 const api = axios.create({
@@ -142,8 +142,11 @@ export interface AuthResponse {
       lastLoginAt?: string
       createdAt: string
       updatedAt?: string
+      emailVerified?: boolean
     }
     token: string
+    requireEmailVerification?: boolean
+    emailSent?: boolean
   }
 }
 
@@ -521,15 +524,7 @@ export const apiService = {
     return response.data
   },
 
-  // 获取用户统计信息
-  async getUserStats(): Promise<{
-    success: boolean
-    data?: any
-    message: string
-  }> {
-    const response = await api.get('/users/stats')
-    return response.data
-  },
+
 
   // 删除存储配置
   async deleteStorage(id: string): Promise<{
@@ -577,6 +572,16 @@ export const apiService = {
     message?: string
   }> {
     const response = await api.get('/config/system')
+    return response.data
+  },
+
+  // 获取所有系统配置（管理员权限）
+  async getAllSystemConfig(): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.get('/config')
     return response.data
   },
 
@@ -706,6 +711,15 @@ export const apiService = {
     return response.data
   },
 
+  // 从备份恢复数据库
+  async restoreBackup(fileName: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/database/restore', { fileName })
+    return response.data
+  },
+
   // PostgreSQL 转 SQLite
   async migratePostgresToSqlite(databaseUrl: string): Promise<{
     success: boolean
@@ -799,6 +813,108 @@ export const apiService = {
     data?: any
   }> {
     const response = await api.get('/v1/docs')
+    return response.data
+  },
+
+  // ============ 用户管理相关 ============
+  
+  // 获取用户列表
+  async getUserList(page: number = 1, pageSize: number = 20, search: string = ''): Promise<{
+    success: boolean
+    data?: {
+      list: any[]
+      total: number
+    }
+    message?: string
+  }> {
+    const response = await api.get('/auth/users', { params: { page, limit: pageSize, search } })
+    return response.data
+  },
+
+  // 获取用户统计
+  async getUserStats(): Promise<{
+    success: boolean
+    data?: {
+      total: number
+      active: number
+      disabled: number
+      admin: number
+    }
+    message?: string
+  }> {
+    const response = await api.get('/auth/users/stats')
+    return response.data
+  },
+
+  // 更新用户信息
+  async updateUser(id: string, data: { email?: string; role?: string; isDisabled?: boolean }): Promise<{
+    success: boolean
+    message: string
+    data?: any
+  }> {
+    const response = await api.put(`/auth/users/${id}`, data)
+    return response.data
+  },
+
+  // 删除用户
+  async deleteUser(id: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.delete(`/auth/users/${id}`)
+    return response.data
+  },
+
+  // ============ 别名方法（兼容新页面） ============
+  
+  // 获取存储列表（别名）
+  async getStorages(): Promise<{
+    success: boolean
+    data?: any[]
+    message?: string
+  }> {
+    return this.getAllStorages()
+  },
+
+  // 获取备份列表（别名）
+  async getBackups(): Promise<{
+    success: boolean
+    data?: Array<{
+      fileName: string
+      fileSize: number
+      createdAt: string
+    }>
+    message?: string
+  }> {
+    return this.getDatabaseBackups()
+  },
+
+  // 迁移数据库（别名）
+  async migrateDatabase(databaseUrl: string): Promise<{
+    success: boolean
+    message: string
+    data?: any
+  }> {
+    return this.migratePostgresToSqlite(databaseUrl)
+  },
+
+  // ============ 邮箱验证相关 ============
+
+  // 重新发送验证邮件
+  async resendVerificationEmail(email: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/auth/resend-verification', { email })
+    return response.data
+  },
+
+  // 验证邮箱（通过token）
+  async verifyEmail(token: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.get('/auth/verify-email', { params: { token } })
     return response.data
   }
 }

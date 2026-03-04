@@ -13,7 +13,17 @@ import Profile from '@/views/Profile.vue'
 import Api from '@/views/Api.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
+import VerifyEmail from '@/views/VerifyEmail.vue'
 import Layout from '@/components/Layout.vue'
+import AdminLayout from '@/components/AdminLayout.vue'
+
+// 管理后台页面
+import StorageManage from '@/views/admin/StorageManage.vue'
+import SystemSettings from '@/views/admin/SystemSettings.vue'
+import MailSettings from '@/views/admin/MailSettings.vue'
+import SecuritySettings from '@/views/admin/SecuritySettings.vue'
+import DatabaseManage from '@/views/admin/DatabaseManage.vue'
+import UserManage from '@/views/admin/UserManage.vue'
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
@@ -32,6 +42,15 @@ const routes: RouteRecordRaw[] = [
     component: Register,
     meta: { 
       title: '注册',
+      requiresAuth: false 
+    }
+  },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: VerifyEmail,
+    meta: { 
+      title: '邮箱验证',
       requiresAuth: false 
     }
   },
@@ -72,16 +91,10 @@ const routes: RouteRecordRaw[] = [
           icon: 'chart'
         }
       },
+      // 旧的设置页面重定向到新的管理后台
       {
         path: 'settings',
-        name: 'Settings',
-        component: Settings,
-        meta: { 
-          title: '系统配置',
-          requiresAuth: true,
-          requiresAdmin: true,
-          icon: 'settings'
-        }
+        redirect: '/admin/system'
       },
       {
         path: 'profile',
@@ -102,6 +115,51 @@ const routes: RouteRecordRaw[] = [
           requiresAuth: true,
           icon: 'code'
         }
+      }
+    ]
+  },
+  // 新的管理后台路由
+  {
+    path: '/admin',
+    component: AdminLayout,
+    redirect: '/admin/storage',
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: 'storage',
+        name: 'AdminStorage',
+        component: StorageManage,
+        meta: { title: '存储管理' }
+      },
+      {
+        path: 'system',
+        name: 'AdminSystem',
+        component: SystemSettings,
+        meta: { title: '系统设置' }
+      },
+      {
+        path: 'mail',
+        name: 'AdminMail',
+        component: MailSettings,
+        meta: { title: '邮件服务' }
+      },
+      {
+        path: 'security',
+        name: 'AdminSecurity',
+        component: SecuritySettings,
+        meta: { title: '安全管理' }
+      },
+      {
+        path: 'database',
+        name: 'AdminDatabase',
+        component: DatabaseManage,
+        meta: { title: '数据库' }
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: UserManage,
+        meta: { title: '用户管理' }
       }
     ]
   },

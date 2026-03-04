@@ -82,9 +82,17 @@ export const useAuth = () => {
         return { success: false, message: response.message }
       }
     } catch (error: any) {
-
+      const errorData = error.response?.data
+      const message = errorData?.message || error.message || '登录失败'
       
-      const message = error.response?.data?.message || error.message || '登录失败'
+      // 如果是邮箱未验证错误，抛出完整错误以便上层处理
+      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        const customError = new Error(message)
+        ;(customError as any).code = 'EMAIL_NOT_VERIFIED'
+        ;(customError as any).response = error.response
+        throw customError
+      }
+      
       MessagePlugin.error(message)
       return { success: false, message }
     } finally {

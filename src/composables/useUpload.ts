@@ -8,6 +8,7 @@ export interface UploadFile {
   progress: number
   url?: string
   error?: string
+  preview?: string
 }
 
 export function useUpload() {
