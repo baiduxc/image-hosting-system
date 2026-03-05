@@ -527,7 +527,7 @@ onMounted(() => {
 .api-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 0 32px 0;
 }
 
 .page-header {

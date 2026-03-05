@@ -757,7 +757,7 @@ export const apiService = {
     data?: any[]
     message?: string
   }> {
-    const response = await api.get('/keys/keys')
+    const response = await api.get('/keys')
     return response.data
   },
 
@@ -771,7 +771,7 @@ export const apiService = {
     data?: any
     message?: string
   }> {
-    const response = await api.post('/keys/keys', data)
+    const response = await api.post('/keys', data)
     return response.data
   },
 
@@ -784,7 +784,7 @@ export const apiService = {
     data?: any
     message?: string
   }> {
-    const response = await api.put(`/keys/keys/${id}`, data)
+    const response = await api.put(`/keys/${id}`, data)
     return response.data
   },
 
@@ -794,7 +794,7 @@ export const apiService = {
     data?: any
     message?: string
   }> {
-    const response = await api.patch(`/keys/keys/${id}/toggle`)
+    const response = await api.patch(`/keys/${id}/toggle`)
     return response.data
   },
 
@@ -803,7 +803,7 @@ export const apiService = {
     success: boolean
     message?: string
   }> {
-    const response = await api.delete(`/keys/keys/${id}`)
+    const response = await api.delete(`/keys/${id}`)
     return response.data
   },
 
