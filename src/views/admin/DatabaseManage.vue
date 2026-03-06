@@ -313,7 +313,7 @@ onMounted(() => {
 
 <style scoped>
 .admin-page {
-  max-width: 900px;
+  max-width: none;
 }
 
 .page-header {

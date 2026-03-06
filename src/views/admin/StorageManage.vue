@@ -544,7 +544,7 @@ onMounted(loadData)
 
 <style scoped>
 .admin-page {
-  max-width: 1200px;
+  max-width: none;
 }
 
 .page-header {

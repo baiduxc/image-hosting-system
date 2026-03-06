@@ -85,18 +85,60 @@
           <t-button theme="primary" :loading="savingUpload" @click="saveUpload">保存更改</t-button>
         </div>
       </div>
+
+      <!-- Announcement Settings Card -->
+      <div class="setting-card">
+        <div class="card-header">
+          <div class="header-icon orange">
+            <BellIcon :size="20" />
+          </div>
+          <div class="header-text">
+            <h3>系统公告</h3>
+            <p>配置网站公告，支持 Markdown 格式</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-item full">
+              <div class="switch-wrap">
+                <div class="switch-label">
+                  <span>启用公告</span>
+                  <span class="switch-desc">开启后用户登录后将看到公告弹窗</span>
+                </div>
+                <t-switch v-model="announcement.enabled" size="large" />
+              </div>
+            </div>
+            <div class="form-item full" v-if="announcement.enabled">
+              <label>公告内容（支持 Markdown）</label>
+              <t-textarea 
+                v-model="announcement.content" 
+                placeholder="请输入公告内容，支持 Markdown 格式&#10;例如：&#10;## 系统维护通知&#10;系统将于今晚 22:00-24:00 进行维护升级"
+                :rows="8"
+              />
+              <div class="markdown-preview" v-if="announcement.content">
+                <label>预览：</label>
+                <div class="preview-content" v-html="renderMarkdownPreview(announcement.content)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <t-button theme="primary" :loading="savingAnnouncement" @click="saveAnnouncement">保存更改</t-button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { GlobeIcon, UploadIcon } from 'lucide-vue-next'
+import { GlobeIcon, UploadIcon, BellIcon } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
 
 const saving = ref(false)
 const savingUpload = ref(false)
+const savingAnnouncement = ref(false)
 
 const site = reactive({
   site_title: '',
@@ -110,6 +152,11 @@ const upload = reactive({
   max_file_size: 10,
   max_batch_count: 20,
   compress_quality: 80
+})
+
+const announcement = reactive({
+  content: '',
+  enabled: false
 })
 
 // 加载网站信息（使用公开接口，返回下划线命名）
@@ -159,6 +206,47 @@ const loadUploadConfig = async () => {
   } catch (error) {
     console.error('加载上传配置失败', error)
   }
+}
+
+// 加载公告配置
+const loadAnnouncementConfig = async () => {
+  try {
+    const res = await apiService.getAllSystemConfig()
+
+    if (res.success && res.data) {
+      const systemConfig = res.data.system || res.data
+      announcement.content = systemConfig.announcement || ''
+      announcement.enabled = systemConfig.announcementEnabled || false
+    }
+  } catch (error) {
+    console.error('加载公告配置失败', error)
+  }
+}
+
+// 简单的 Markdown 预览渲染
+const renderMarkdownPreview = (content: string): string => {
+  if (!content) return ''
+  // 简单的 Markdown 转换
+  let html = content
+    // 转义 HTML
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // 标题
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // 粗体和斜体
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // 代码
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    // 链接
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    // 换行
+    .replace(/\n/g, '<br>')
+  return html
 }
 
 const saveSite = async () => {
@@ -229,16 +317,48 @@ const saveUpload = async () => {
   }
 }
 
+const saveAnnouncement = async () => {
+  savingAnnouncement.value = true
+  try {
+    // 保存到 system 分组，需要和后端现有配置合并
+    const res = await apiService.getAllSystemConfig()
+    const existing = res.data?.system || {}
+    
+    // 提取非表单管理的字段，排除公告字段避免重复
+    const { 
+      announcement: _, announcementEnabled: __,
+      ...keepFields 
+    } = existing
+    
+    const saveData = {
+      // 保留其他配置
+      ...keepFields,
+      // 公告配置
+      announcement: announcement.content,
+      announcementEnabled: announcement.enabled
+    }
+    await apiService.setConfigItem('system', saveData, '系统基础配置')
+    MessagePlugin.success('保存成功')
+    // 保存成功后重新加载配置
+    await loadAnnouncementConfig()
+  } catch (error: any) {
+    MessagePlugin.error(error.message || '保存失败')
+  } finally {
+    savingAnnouncement.value = false
+  }
+}
+
 onMounted(() => {
   loadSiteConfig()
   loadSystemConfig()
   loadUploadConfig()
+  loadAnnouncementConfig()
 })
 </script>
 
 <style scoped>
 .admin-page {
-  max-width: 900px;
+  max-width: none;
 }
 
 .page-header {
@@ -290,6 +410,7 @@ onMounted(() => {
 
 .header-icon.blue { background: linear-gradient(135deg, #0052d9, #1890ff); }
 .header-icon.green { background: linear-gradient(135deg, #00b578, #00d68a); }
+.header-icon.orange { background: linear-gradient(135deg, #ff7d00, #ff9a2e); }
 
 .header-text h3 {
   font-size: 16px;
@@ -380,6 +501,77 @@ onMounted(() => {
 .switch-desc {
   font-size: 13px;
   color: #86909c;
+}
+
+.markdown-preview {
+  margin-top: 12px;
+  padding: 16px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  border: 1px solid #e5e6eb;
+}
+
+.markdown-preview label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4e5969;
+  margin-bottom: 8px;
+}
+
+.preview-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1d2129;
+}
+
+.preview-content h1,
+.preview-content h2,
+.preview-content h3 {
+  margin: 12px 0 8px;
+  color: #1d2129;
+}
+
+.preview-content h1 {
+  font-size: 18px;
+}
+
+.preview-content h2 {
+  font-size: 16px;
+}
+
+.preview-content h3 {
+  font-size: 14px;
+}
+
+.preview-content strong {
+  font-weight: 600;
+}
+
+.preview-content em {
+  font-style: italic;
+}
+
+.preview-content code {
+  background: #e8e8e8;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.preview-content a {
+  color: #0052d9;
+  text-decoration: none;
+}
+
+.preview-content a:hover {
+  text-decoration: underline;
+}
+
+.preview-content br {
+  display: block;
+  margin: 4px 0;
 }
 
 @media (max-width: 768px) {

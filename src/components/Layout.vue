@@ -1,5 +1,12 @@
 <template>
   <div class="layout-container">
+    <!-- 公告弹窗 -->
+    <AnnouncementDialog
+      v-model="showAnnouncement"
+      :content="announcementContent"
+      @close="handleAnnouncementClose"
+    />
+
     <!-- 顶部导航栏 -->
     <header class="layout-header">
       <div class="header-content">
@@ -94,6 +101,8 @@ import {
 import { useAuth } from '@/composables/useAuth'
 import { useSystemConfig } from '@/composables/useSystemConfig'
 import { useStorage } from '@/composables/useStorage'
+import { apiService } from '@/services/api'
+import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -112,6 +121,12 @@ const logoError = ref(false)
 
 // 响应式数据
 const globalLoading = ref(false)
+
+// 公告相关
+const showAnnouncement = ref(false)
+const announcementContent = ref('')
+const announcementEnabled = ref(false)
+const ANNOUNCEMENT_STORAGE_KEY = 'announcement_dismissed'
 
 // 导航项配置
 const navItems = computed(() => {
@@ -199,6 +214,55 @@ const goToHome = () => {
   router.push('/upload')
 }
 
+// 检查并显示公告
+const checkAndShowAnnouncement = async () => {
+  try {
+    // 获取系统配置
+    const res = await apiService.getSystemConfig()
+    if (res.success && res.data) {
+      announcementContent.value = res.data.announcement || ''
+      announcementEnabled.value = res.data.announcement_enabled === true
+      
+      // 如果公告未启用或内容为空，不显示
+      if (!announcementEnabled.value || !announcementContent.value.trim()) {
+        return
+      }
+      
+      // 检查用户是否选择了"不再提示"
+      const dismissed = localStorage.getItem(ANNOUNCEMENT_STORAGE_KEY)
+      if (dismissed) {
+        try {
+          const dismissedData = JSON.parse(dismissed)
+          // 检查是否是当前这条公告
+          if (dismissedData.content === announcementContent.value) {
+            return
+          }
+        } catch (e) {
+          // 解析失败，清除旧的存储
+          localStorage.removeItem(ANNOUNCEMENT_STORAGE_KEY)
+        }
+      }
+      
+      // 显示公告弹窗
+      showAnnouncement.value = true
+    }
+  } catch (error) {
+    console.error('获取公告配置失败:', error)
+  }
+}
+
+// 处理公告弹窗关闭
+const handleAnnouncementClose = (doNotShowAgain: boolean) => {
+  if (doNotShowAgain && announcementContent.value) {
+    // 保存"不再提示"状态，包含公告内容用于识别
+    localStorage.setItem(ANNOUNCEMENT_STORAGE_KEY, JSON.stringify({
+      content: announcementContent.value,
+      timestamp: Date.now()
+    }))
+  }
+  showAnnouncement.value = false
+}
+
 // 组件挂载时执行
 onMounted(async () => {
   // 加载系统配置
@@ -210,6 +274,9 @@ onMounted(async () => {
   
   // 加载存储选项
   await loadStorageOptions()
+  
+  // 检查并显示公告
+  await checkAndShowAnnouncement()
 })
 </script>
 

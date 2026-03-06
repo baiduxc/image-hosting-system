@@ -67,7 +67,8 @@ import {
   DatabaseIcon,
   UsersIcon,
   MenuIcon,
-  HomeIcon
+  HomeIcon,
+  CrownIcon
 } from 'lucide-vue-next'
 import { apiService } from '@/services/api'
 
@@ -83,7 +84,8 @@ const menuItems = [
   { path: '/admin/mail', title: '邮件服务', icon: MailIcon },
   { path: '/admin/security', title: '安全管理', icon: ShieldIcon },
   { path: '/admin/database', title: '数据库', icon: DatabaseIcon },
-  { path: '/admin/users', title: '用户管理', icon: UsersIcon }
+  { path: '/admin/users', title: '用户管理', icon: UsersIcon },
+  { path: '/admin/user-groups', title: '用户组管理', icon: CrownIcon }
 ]
 
 const currentPageTitle = computed(() => {

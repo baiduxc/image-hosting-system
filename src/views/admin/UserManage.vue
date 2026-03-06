@@ -68,6 +68,10 @@
           <span class="role-tag" :class="row.role">{{ row.role === 'admin' ? '管理员' : '用户' }}</span>
         </template>
 
+        <template #group="{ row }">
+          <span class="group-tag">{{ row.groupName || '默认组' }}</span>
+        </template>
+
         <template #imageCount="{ row }">
           <span class="count-text">{{ row.imageCount || 0 }}</span>
         </template>
@@ -134,6 +138,17 @@
           </t-radio-group>
         </div>
         <div class="form-item">
+          <label>用户组</label>
+          <t-select v-model="editForm.groupId" placeholder="请选择用户组" clearable @change="handleGroupChange">
+            <t-option v-for="group in userGroups" :key="group.id" :value="group.id" :label="group.name" />
+          </t-select>
+        </div>
+        <div class="form-item" v-if="editForm.groupId">
+          <label>用户组到期时间</label>
+          <t-date-picker v-model="editForm.groupExpiresAt" placeholder="留空表示永久有效" clearable />
+          <div class="form-hint">设置用户组权限的到期时间，留空表示永久有效</div>
+        </div>
+        <div class="form-item">
           <label>账号状态</label>
           <t-switch v-model="editForm.isDisabled" :label="['已封禁', '正常']" />
         </div>
@@ -155,11 +170,14 @@ const searchKey = ref('')
 const saving = ref(false)
 
 const drawerVisible = ref(false)
+const userGroups = ref<any[]>([])
 const editForm = reactive({
   id: '',
   username: '',
   email: '',
   role: 'user',
+  groupId: null as number | null,
+  groupExpiresAt: '',
   isDisabled: false
 })
 
@@ -172,6 +190,7 @@ const pagination = reactive({
 const columns = [
   { colKey: 'username', title: '用户', width: 200 },
   { colKey: 'role', title: '角色', width: 90, align: 'center' },
+  { colKey: 'group', title: '用户组', width: 100, align: 'center' },
   { colKey: 'imageCount', title: '图片数', width: 80, align: 'center' },
   { colKey: 'status', title: '状态', width: 90, align: 'center' },
   { colKey: 'createdAt', title: '注册时间', width: 120 },
@@ -226,15 +245,36 @@ const handlePageChange = (pageInfo: any) => {
   loadData()
 }
 
-const openEdit = (row: any) => {
+const openEdit = async (row: any) => {
   Object.assign(editForm, {
     id: row.id,
     username: row.username,
     email: row.email,
     role: row.role,
+    groupId: row.groupId || null,
+    groupExpiresAt: row.groupExpiresAt || '',
     isDisabled: row.isDisabled
   })
+  // 加载用户组列表
+  await loadUserGroups()
   drawerVisible.value = true
+}
+
+const handleGroupChange = (value: any) => {
+  if (!value) {
+    editForm.groupExpiresAt = ''
+  }
+}
+
+const loadUserGroups = async () => {
+  try {
+    const res = await apiService.getUserGroups()
+    if (res.success) {
+      userGroups.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载用户组失败', error)
+  }
 }
 
 const saveUser = async () => {
@@ -247,6 +287,8 @@ const saveUser = async () => {
     const res = await apiService.updateUser(editForm.id, {
       email: editForm.email,
       role: editForm.role,
+      groupId: editForm.groupId,
+      groupExpiresAt: editForm.groupExpiresAt || undefined,
       isDisabled: editForm.isDisabled
     })
     if (res.success) {
@@ -298,7 +340,7 @@ onMounted(loadData)
 
 <style scoped>
 .admin-page {
-  max-width: 1100px;
+  max-width: none;
 }
 
 .page-header {
@@ -487,6 +529,12 @@ onMounted(loadData)
   font-weight: 500;
   color: #4e5969;
   margin-bottom: 8px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 4px;
 }
 
 /* Responsive */

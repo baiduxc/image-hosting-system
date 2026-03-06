@@ -524,6 +524,83 @@ export const apiService = {
     return response.data
   },
 
+  // ============ 安全修改密码（带验证码）============
+
+  // 发送密码修改验证码
+  async sendPasswordVerificationCode(data: { currentPassword: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/send-password-code', data)
+    return response.data
+  },
+
+  // 验证密码修改验证码
+  async verifyPasswordVerificationCode(data: { code: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/verify-password-code', data)
+    return response.data
+  },
+
+  // 使用验证码修改密码
+  async changePasswordWithCode(data: { code: string; newPassword: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/change-password-with-code', data)
+    return response.data
+  },
+
+  // ============ 安全修改邮箱（带验证码）============
+
+  // 验证当前密码
+  async verifyCurrentPassword(data: { currentPassword: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/verify-password', data)
+    return response.data
+  },
+
+  // 发送当前邮箱验证码
+  async sendEmailVerificationCode(data: { currentPassword: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/send-email-code', data)
+    return response.data
+  },
+
+  // 验证当前邮箱验证码
+  async verifyEmailVerificationCode(data: { code: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/verify-email-code', data)
+    return response.data
+  },
+
+  // 发送新邮箱验证码
+  async sendNewEmailCode(data: { newEmail: string }): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await api.post('/users/send-new-email-code', data)
+    return response.data
+  },
+
+  // 修改邮箱
+  async changeEmail(data: { oldCode: string; newEmail: string; newCode: string }): Promise<{
+    success: boolean
+    message: string
+    data?: any
+  }> {
+    const response = await api.post('/users/change-email', data)
+    return response.data
+  },
+
 
 
   // 删除存储配置
@@ -847,7 +924,7 @@ export const apiService = {
   },
 
   // 更新用户信息
-  async updateUser(id: string, data: { email?: string; role?: string; isDisabled?: boolean }): Promise<{
+  async updateUser(id: string, data: { email?: string; role?: string; groupId?: number | null; groupExpiresAt?: string; isDisabled?: boolean }): Promise<{
     success: boolean
     message: string
     data?: any
@@ -915,6 +992,168 @@ export const apiService = {
     message: string
   }> {
     const response = await api.get('/auth/verify-email', { params: { token } })
+    return response.data
+  },
+
+  // ============ 用户组管理相关 ==========
+  
+  // 获取所有用户组
+  async getUserGroups(): Promise<{
+    success: boolean
+    data?: any[]
+    message?: string
+  }> {
+    const response = await api.get('/user-groups')
+    return response.data
+  },
+
+  // 创建用户组
+  async createUserGroup(data: {
+    name: string
+    description?: string
+    daily_upload_limit?: number
+    weekly_upload_limit?: number
+    monthly_upload_limit?: number
+    max_file_size?: number
+    concurrent_uploads?: number
+    storage_space?: number
+    is_default?: boolean
+  }): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.post('/user-groups', data)
+    return response.data
+  },
+
+  // 更新用户组
+  async updateUserGroup(id: number, data: {
+    name?: string
+    description?: string
+    daily_upload_limit?: number
+    weekly_upload_limit?: number
+    monthly_upload_limit?: number
+    max_file_size?: number
+    concurrent_uploads?: number
+    storage_space?: number
+    is_default?: boolean
+  }): Promise<{
+    success: boolean
+    data?: any
+    message?: string
+  }> {
+    const response = await api.put(`/user-groups/${id}`, data)
+    return response.data
+  },
+
+  // 删除用户组
+  async deleteUserGroup(id: number): Promise<{
+    success: boolean
+    message?: string
+  }> {
+    const response = await api.delete(`/user-groups/${id}`)
+    return response.data
+  },
+
+  // 获取所有密钥
+  async getUserGroupKeys(params: {
+    page?: number
+    limit?: number
+    group_id?: number
+    is_used?: string
+  } = {}): Promise<{
+    success: boolean
+    data?: {
+      list: any[]
+      pagination: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+      }
+    }
+    message?: string
+  }> {
+    const response = await api.get('/user-groups/keys', { params })
+    return response.data
+  },
+
+  // 生成密钥
+  async generateUserGroupKeys(data: {
+    group_id: number
+    count?: number
+    expires_at?: string
+  }): Promise<{
+    success: boolean
+    data?: any[]
+    message?: string
+  }> {
+    const response = await api.post('/user-groups/keys', data)
+    return response.data
+  },
+
+  // 删除密钥
+  async deleteUserGroupKey(id: number): Promise<{
+    success: boolean
+    message?: string
+  }> {
+    const response = await api.delete(`/user-groups/keys/${id}`)
+    return response.data
+  },
+
+  // 获取当前用户组信息
+  async getMyUserGroup(): Promise<{
+    success: boolean
+    data?: {
+      group: {
+        id: number
+        name: string
+        description: string
+        daily_upload_limit: number
+        weekly_upload_limit: number
+        monthly_upload_limit: number
+        max_file_size: number
+        concurrent_uploads: number
+        storage_space?: number
+      }
+      usage: {
+        daily: number
+        weekly: number
+        monthly: number
+      }
+    }
+    message?: string
+  }> {
+    const response = await api.get('/user-groups/my-group')
+    return response.data
+  },
+
+  // 兑换密钥
+  async redeemUserGroupKey(key: string): Promise<{
+    success: boolean
+    data?: {
+      group: any
+    }
+    message?: string
+  }> {
+    const response = await api.post('/user-groups/redeem', { key })
+    return response.data
+  },
+
+  // 检查上传限制
+  async checkUploadLimit(type: 'daily' | 'weekly' | 'monthly'): Promise<{
+    success: boolean
+    data?: {
+      type: string
+      current: number
+      limit: number
+      remaining: number
+      exceeded: boolean
+    }
+    message?: string
+  }> {
+    const response = await api.get(`/user-groups/check-limit/${type}`)
     return response.data
   }
 }

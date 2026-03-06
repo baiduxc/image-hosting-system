@@ -24,6 +24,7 @@ import MailSettings from '@/views/admin/MailSettings.vue'
 import SecuritySettings from '@/views/admin/SecuritySettings.vue'
 import DatabaseManage from '@/views/admin/DatabaseManage.vue'
 import UserManage from '@/views/admin/UserManage.vue'
+import UserGroups from '@/views/admin/UserGroups.vue'
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
@@ -160,6 +161,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminUsers',
         component: UserManage,
         meta: { title: '用户管理' }
+      },
+      {
+        path: 'user-groups',
+        name: 'AdminUserGroups',
+        component: UserGroups,
+        meta: { title: '用户组管理' }
       }
     ]
   },
