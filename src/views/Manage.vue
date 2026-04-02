@@ -41,8 +41,13 @@
           <VideoIcon v-if="isVideo(image)" class="placeholder-icon" />
           <ImageIcon v-else class="placeholder-icon" />
         </div>
+
+        <div v-if="isVideo(image)" class="video-play-overlay">
+          <PlayIcon class="video-play-icon" />
+        </div>
       </div>
     </div>
+
 
     <!-- 空状态 -->
     <div v-if="!isLoading && imageList.length === 0" class="empty-state">
@@ -319,8 +324,10 @@ import {
   ExternalLinkIcon,
   InfoIcon,
   CheckIcon,
-  VideoIcon
+  VideoIcon,
+  PlayIcon
 } from 'lucide-vue-next'
+
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
 
@@ -867,7 +874,28 @@ onMounted(() => {
   display: block;
 }
 
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.video-play-icon {
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
 .image-placeholder {
+
   width: 100%;
   height: 100%;
   display: flex;
