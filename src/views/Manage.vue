@@ -122,15 +122,18 @@
       header="视频预览"
       width="960px"
       :footer="null"
+      @close="handleVideoPreviewClose"
     >
       <video
         v-if="currentVideoUrl"
+        ref="videoPreviewRef"
         :src="currentVideoUrl"
         controls
         autoplay
         style="width: 100%; max-height: 70vh; background: #000; border-radius: 8px;"
       ></video>
     </t-dialog>
+
 
     <!-- 右键菜单 -->
     <div 
@@ -345,6 +348,8 @@ const imageViewerVisible = ref(false)
 const currentImageIndex = ref(0)
 const videoPreviewVisible = ref(false)
 const currentVideoUrl = ref('')
+const videoPreviewRef = ref<HTMLVideoElement | null>(null)
+
 
 // 右键菜单相关
 const contextMenuVisible = ref(false)
@@ -440,6 +445,22 @@ const handleImageClick = (event: MouseEvent, image: any, index: number) => {
 const handleImageIndexChange = (index: number) => {
   currentImageIndex.value = index
 }
+
+const stopVideoPlayback = () => {
+  const videoEl = videoPreviewRef.value
+  if (videoEl) {
+    videoEl.pause()
+    videoEl.currentTime = 0
+    videoEl.removeAttribute('src')
+    videoEl.load()
+  }
+  currentVideoUrl.value = ''
+}
+
+const handleVideoPreviewClose = () => {
+  stopVideoPlayback()
+}
+
 
 // 显示右键菜单
 const showContextMenu = (event: MouseEvent, image: any, index: number) => {
@@ -694,6 +715,12 @@ const handleImageError = (e: Event) => {
   }
 }
 
+watch(videoPreviewVisible, (visible) => {
+  if (!visible) {
+    stopVideoPlayback()
+  }
+})
+
 // 监听搜索查询变化
 watch(searchQuery, () => {
   // 防抖处理
@@ -705,10 +732,19 @@ watch(searchQuery, () => {
   }, 500) as any
 })
 
+
 // 组件挂载时执行
 onMounted(() => {
   loadImages()
 })
+
+onUnmounted(() => {
+  stopVideoPlayback()
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+  }
+})
+
 </script>
 
 <style>
