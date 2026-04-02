@@ -2,8 +2,8 @@
   <div class="upload-page">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h1 class="page-title">上传图片</h1>
-      <p class="page-description">上传图片到对象存储和网络图片转存</p>
+      <h1 class="page-title">上传媒体</h1>
+      <p class="page-description">上传图片/视频到对象存储，支持网络链接转存</p>
     </div>
 
     <!-- 主要内容区域 -->
@@ -22,12 +22,12 @@
           <div class="upload-content">
             <UploadIcon class="upload-icon" />
             <h3 class="upload-title">拖拽文件到此处上传</h3>
-            <p class="upload-desc">支持 JPG、PNG、GIF、WebP 格式，单个文件最大 10MB</p>
+            <p class="upload-desc">支持图片与视频（JPG/PNG/GIF/WebP/MP4/WebM/MOV），单个文件最大 200MB</p>
             <input
               ref="fileInput"
               type="file"
               multiple
-              accept="image/*"
+              accept="image/*,video/*"
               class="hidden"
               @change="handleFileSelect"
             />
@@ -79,9 +79,17 @@
             >
               <!-- 缩略图 -->
               <div class="file-thumb">
-                <img v-if="file.preview" :src="file.preview" alt="" />
+                <img v-if="file.preview && file.previewType === 'image'" :src="file.preview" alt="" />
+                <video
+                  v-else-if="file.preview && file.previewType === 'video'"
+                  :src="file.preview"
+                  muted
+                  preload="metadata"
+                  playsinline
+                ></video>
                 <div v-else class="thumb-placeholder">
-                  <ImageIcon class="placeholder-icon" />
+                  <VideoIcon v-if="file.file.type.startsWith('video/')" class="placeholder-icon" />
+                  <ImageIcon v-else class="placeholder-icon" />
                 </div>
                 <!-- 状态覆盖层 -->
                 <div v-if="file.status === 'uploading'" class="thumb-overlay">
@@ -135,19 +143,19 @@
       <!-- URL转存区域 -->
       <t-card class="transfer-card">
         <template #header>
-          <h3 class="card-title">网络图片转存</h3>
+          <h3 class="card-title">网络媒体转存</h3>
         </template>
 
         <div class="transfer-content">
           <t-textarea
             v-model="urlList"
-            placeholder="请输入图片URL，每行一个链接（最多20个）&#10;例如：&#10;https://example.com/image1.jpg"
+            placeholder="请输入媒体URL，每行一个链接（最多20个）&#10;支持图片、视频直链及 YouTube/X.com/抖音分享链接"
             :rows="3"
             class="url-input"
           />
           
           <div class="transfer-toolbar">
-            <span class="transfer-hint">支持批量转存，自动绕过防盗链</span>
+            <span class="transfer-hint">支持图片/视频批量转存，支持 YouTube、X.com、抖音分享链接</span>
             <div class="transfer-actions">
               <t-button 
                 variant="outline"
@@ -209,6 +217,7 @@ import { ref, computed, onMounted } from 'vue'
 import { 
   UploadIcon,
   ImageIcon,
+  VideoIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
@@ -280,17 +289,21 @@ const handleDragLeave = (e: DragEvent) => {
   isDragOver.value = false
 }
 
+const isSupportedMediaFile = (file: File) => {
+  return file.type.startsWith('image/') || file.type.startsWith('video/')
+}
+
 const handleDrop = (e: DragEvent) => {
   e.preventDefault()
   isDragOver.value = false
-  
+
   const files = Array.from(e.dataTransfer?.files || [])
-  const imageFiles = files.filter(file => file.type.startsWith('image/'))
-  
-  if (imageFiles.length > 0) {
-    addFilesWithPreview(imageFiles)
+  const mediaFiles = files.filter(isSupportedMediaFile)
+
+  if (mediaFiles.length > 0) {
+    addFilesWithPreview(mediaFiles)
   } else {
-    MessagePlugin.error('请拖拽图片文件')
+    MessagePlugin.error('请拖拽图片或视频文件')
   }
 }
 
@@ -308,23 +321,40 @@ const handleFileSelect = (e: Event) => {
 
 // 添加文件并生成预览
 const addFilesWithPreview = (files: File[]) => {
-  addFiles(files)
-  
-  // 为每个文件生成预览
-  files.forEach((file, index) => {
-    const fileIndex = uploadFiles.value.length - files.length + index
-    if (fileIndex >= 0 && file.type.startsWith('image/')) {
+  const mediaFiles = files.filter(isSupportedMediaFile)
+
+  if (mediaFiles.length === 0) {
+    MessagePlugin.error('未检测到可上传的图片或视频文件')
+    return
+  }
+
+  addFiles(mediaFiles)
+
+  mediaFiles.forEach((file, index) => {
+    const fileIndex = uploadFiles.value.length - mediaFiles.length + index
+    if (fileIndex < 0 || !uploadFiles.value[fileIndex]) {
+      return
+    }
+
+    if (file.type.startsWith('image/')) {
       const reader = new FileReader()
       reader.onload = (e) => {
         if (uploadFiles.value[fileIndex]) {
           uploadFiles.value[fileIndex].preview = e.target?.result as string
+          uploadFiles.value[fileIndex].previewType = 'image'
         }
       }
       reader.readAsDataURL(file)
+      return
+    }
+
+    if (file.type.startsWith('video/')) {
+      uploadFiles.value[fileIndex].preview = URL.createObjectURL(file)
+      uploadFiles.value[fileIndex].previewType = 'video'
     }
   })
-  
-  MessagePlugin.success(`已添加 ${files.length} 个文件`)
+
+  MessagePlugin.success(`已添加 ${mediaFiles.length} 个文件`)
 }
 
 // 处理上传
@@ -360,7 +390,7 @@ const validateUrls = async () => {
   }
 }
 
-// URL转存
+// URL转存（图片/视频）
 const handleTransfer = async () => {
   const urls = urlList.value.split('\n').filter(url => url.trim())
   if (urls.length === 0) return
@@ -586,7 +616,8 @@ onMounted(() => {
   background: var(--td-bg-color-container);
 }
 
-.file-thumb img {
+.file-thumb img,
+.file-thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;

@@ -9,6 +9,7 @@ export interface UploadFile {
   url?: string
   error?: string
   preview?: string
+  previewType?: 'image' | 'video'
 }
 
 export function useUpload() {

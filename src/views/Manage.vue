@@ -20,17 +20,26 @@
           </div>
         </div>
         
-        <!-- 图片 -->
-        <img 
-          v-if="image.url" 
-          :src="getImageUrl(image.url)" 
+        <!-- 媒体缩略图 -->
+        <video
+          v-if="image.url && isVideo(image)"
+          :src="getImageUrl(image.url)"
+          class="gallery-image"
+          muted
+          preload="metadata"
+          playsinline
+        ></video>
+        <img
+          v-else-if="image.url"
+          :src="getImageUrl(image.url)"
           :alt="image.originalName"
           class="gallery-image"
           @error="handleImageError"
           @load="handleImageLoad"
         />
         <div v-else class="image-placeholder">
-          <ImageIcon class="placeholder-icon" />
+          <VideoIcon v-if="isVideo(image)" class="placeholder-icon" />
+          <ImageIcon v-else class="placeholder-icon" />
         </div>
       </div>
     </div>
@@ -38,11 +47,11 @@
     <!-- 空状态 -->
     <div v-if="!isLoading && imageList.length === 0" class="empty-state">
       <ImageIcon class="empty-icon" />
-      <h3 class="empty-title">暂无图片</h3>
-      <p class="empty-desc">还没有上传任何图片，去上传一些图片吧！</p>
+      <h3 class="empty-title">暂无媒体</h3>
+      <p class="empty-desc">还没有上传任何图片或视频，去上传一些吧！</p>
       <t-button theme="primary" @click="$router.push('/upload')">
         <template #icon><UploadIcon /></template>
-        上传图片
+        上传媒体
       </t-button>
     </div>
 
@@ -103,6 +112,21 @@
       @index-change="handleImageIndexChange"
     />
 
+    <t-dialog
+      v-model:visible="videoPreviewVisible"
+      header="视频预览"
+      width="960px"
+      :footer="null"
+    >
+      <video
+        v-if="currentVideoUrl"
+        :src="currentVideoUrl"
+        controls
+        autoplay
+        style="width: 100%; max-height: 70vh; background: #000; border-radius: 8px;"
+      ></video>
+    </t-dialog>
+
     <!-- 右键菜单 -->
     <div 
       v-if="contextMenuVisible" 
@@ -112,7 +136,7 @@
     >
       <div class="menu-item" @click="copyImageLink">
         <CopyIcon class="menu-icon" />
-        <span>复制图片链接</span>
+        <span>复制媒体链接</span>
       </div>
       <div class="menu-item" @click="openInNewWindow">
         <ExternalLinkIcon class="menu-icon" />
@@ -124,7 +148,7 @@
       </div>
       <div class="menu-item" @click="downloadCurrentImage">
         <DownloadIcon class="menu-icon" />
-        <span>下载图片</span>
+        <span>下载媒体</span>
       </div>
       <div class="menu-divider"></div>
       <div class="menu-item danger" @click="deleteCurrentImage">
@@ -143,14 +167,22 @@
     <!-- 图片详情弹窗 -->
     <t-dialog
       v-model:visible="detailsVisible"
-      :header="currentContextImage?.originalName || '图片详情'"
+      :header="currentContextImage?.originalName || '媒体详情'"
       width="600px"
       :footer="null"
     >
       <div class="image-details" v-if="currentContextImage">
         <div class="details-preview">
-          <img 
-            :src="getImageUrl(currentContextImage.url)" 
+          <video
+            v-if="isVideo(currentContextImage)"
+            :src="getImageUrl(currentContextImage.url)"
+            class="details-image"
+            controls
+            preload="metadata"
+          ></video>
+          <img
+            v-else
+            :src="getImageUrl(currentContextImage.url)"
             :alt="currentContextImage.originalName"
             class="details-image"
           />
@@ -181,7 +213,7 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">图片链接:</span>
+            <span class="info-label">媒体链接:</span>
             <div class="link-row">
               <t-input 
                 :value="currentContextImage.url" 
@@ -286,7 +318,8 @@ import {
   UploadIcon,
   ExternalLinkIcon,
   InfoIcon,
-  CheckIcon
+  CheckIcon,
+  VideoIcon
 } from 'lucide-vue-next'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { apiService } from '@/services/api'
@@ -300,9 +333,11 @@ const searchTimeout = ref<number | null>(null)
 const imageList = ref<any[]>([])
 const totalSize = ref(0)
 
-// 图片预览器相关
+// 图片/视频预览相关
 const imageViewerVisible = ref(false)
 const currentImageIndex = ref(0)
+const videoPreviewVisible = ref(false)
+const currentVideoUrl = ref('')
 
 // 右键菜单相关
 const contextMenuVisible = ref(false)
@@ -333,8 +368,14 @@ const pagination = ref({
 })
 
 // 计算属性
+const isVideo = (media: any) => (media?.mimeType || '').toLowerCase().startsWith('video/')
+
+const imageItems = computed(() => {
+  return imageList.value.filter(item => !isVideo(item) && item.url)
+})
+
 const imageUrls = computed(() => {
-  return imageList.value.map(image => getImageUrl(image.url)).filter(url => url)
+  return imageItems.value.map(image => getImageUrl(image.url)).filter(url => url)
 })
 
 // 选中的图片列表
@@ -364,25 +405,28 @@ const toggleSelectMode = () => {
   }
 }
 
-// 处理图片点击 - 支持多选
+// 处理媒体点击 - 支持多选
 const handleImageClick = (event: MouseEvent, image: any, index: number) => {
   if (isSelectMode.value) {
-    // 选择模式下，点击切换选中状态
     if (selectedImages.value.has(image.id)) {
       selectedImages.value.delete(image.id)
     } else {
       selectedImages.value.add(image.id)
     }
-  } else {
-    // 正常模式下预览图片
-    openImageViewer(index)
+    return
   }
-}
 
-// 打开图片预览器
-const openImageViewer = (index: number) => {
-  currentImageIndex.value = index
-  imageViewerVisible.value = true
+  if (isVideo(image)) {
+    currentVideoUrl.value = getImageUrl(image.url)
+    videoPreviewVisible.value = true
+    return
+  }
+
+  const imageIndex = imageItems.value.findIndex(item => item.id === image.id)
+  if (imageIndex >= 0) {
+    currentImageIndex.value = imageIndex
+    imageViewerVisible.value = true
+  }
 }
 
 // 处理图片预览器索引变化
