@@ -408,7 +408,8 @@ const handleTransfer = async () => {
       transferProgress.value = response.data || []
     }
   } catch (error: any) {
-    MessagePlugin.error('转存失败: ' + error.message)
+    const isTimeout = error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')
+    MessagePlugin.error(isTimeout ? '转存超时，请稍后查看结果或缩短单次链接数量后重试' : '转存失败: ' + (error?.message || '未知错误'))
   } finally {
     isTransferring.value = false
   }

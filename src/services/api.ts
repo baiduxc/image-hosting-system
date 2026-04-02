@@ -218,7 +218,7 @@ export const apiService = {
     return response.data
   },
 
-  // 验证图片URL
+  // 验证媒体URL
   async validateUrls(urls: string[]): Promise<{
     success: boolean
     message: string
@@ -230,13 +230,13 @@ export const apiService = {
       error?: string
     }[]
   }> {
-    const response = await api.post('/validate-urls', { urls })
+    const response = await api.post('/validate-urls', { urls }, { timeout: 120000 })
     return response.data
   },
 
-  // 转存网络图片
+  // 转存网络媒体
   async transferImages(urls: string[]): Promise<TransferResponse> {
-    const response = await api.post('/transfer', { urls })
+    const response = await api.post('/transfer', { urls }, { timeout: 600000 })
     return response.data
   },
 
